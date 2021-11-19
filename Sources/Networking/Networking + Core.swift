@@ -206,7 +206,7 @@ public class Request: BaseRequest {
   
   public var parameters: [String : Any?]? = nil
   
-  public var timeOut: TimeInterval = 60.0
+  public var timeOut: TimeInterval = 10.0
   
   public var authorization: Networking.Authorization? = nil
   

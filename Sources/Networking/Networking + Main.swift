@@ -1,6 +1,6 @@
 import Foundation
 
-// MARK: - Modern fnctions
+// MARK: - Stabdard functions with callbacks
 extension Networking {
   
   /// Call a HTTP request. All the error handlers will stop the function immidiately
