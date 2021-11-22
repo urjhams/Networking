@@ -73,10 +73,8 @@ networking.getObjectViaRequest(
 ### Concurrency with async / await (available from iOS 13+, watchOS 6+, macOS 11+)
 `getObjectViaRequest(_:)` has a supported version for concurrency. All we need to do is declare the output with the expected Type for the generic requirement and apply `try await`.
 ```Swift
-  ...
   let sample: Sample = try await networking.getObjectViaRequest(postRequest)
   // do smth with the success model with type `Sample`
-  ...
   
   // to simply get Data and HttpResponse:
   let (data, response) = try await networking.sendRequest(postRequest)
