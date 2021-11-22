@@ -69,8 +69,14 @@ extension Networking {
     
       // try to get data from request
     let (data, response): (Data, URLResponse)
-    if #available(iOS 15.0, macOS 12.0, *),
-       #available(tvOS 15.0, watchOS 8.0, macCatalyst 15.0, *) {
+    if #available(
+      iOS 15.0,
+      macOS 12.0,
+      tvOS 15.0,
+      watchOS 8.0,
+      macCatalyst 15.0,
+      *
+    ) {
       (data, response) = try await URLSession.shared.data(for: urlRequest)
     } else {
       (data, response) = try await URLSession.shared.data(from: urlRequest)
@@ -102,8 +108,14 @@ extension Networking {
     
     // try to get data from request
     let (data, response): (Data, URLResponse)
-    if #available(iOS 15.0, macOS 12.0, *),
-        #available(tvOS 15.0, watchOS 8.0, macCatalyst 15.0, *) {
+    if #available(
+      iOS 15.0,
+      macOS 12.0,
+      tvOS 15.0,
+      watchOS 8.0,
+      macCatalyst 15.0,
+      *
+    ) {
       (data, response) = try await URLSession.shared.data(for: urlRequest)
     } else {
       (data, response) = try await URLSession.shared.data(from: urlRequest)
