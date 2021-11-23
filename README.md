@@ -81,7 +81,7 @@ networking.getObjectViaRequest(
 ```
 
 ### Connectivity Observing
-from iOS 12.0+, macOS 10.14+, the connectivity can be monitor via the `monitor` object. This object is a static object. All we need todo is append the desired handle via `Network.Connectivity.monitorChangeHandlers` static property. This stack up a list of handle we want call whenever there is a change in network availibility state, and we can stack a handle from everywhere in the project.
+from iOS 12.0+, macOS 10.14+, the connectivity can be monitor via the `monitor` object. This object is a static object. All we need to do is append the desired handle via `Network.Connectivity.monitorChangeHandlers` static property. This stack up a list of handles we want call whenever there is a change of each network availibility state, and we can stack a handle from everywhere in the project.
 ```Swift
 let handler: Networking.Connectivity.Handler  = { state in
   switch state {
