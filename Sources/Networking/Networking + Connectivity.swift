@@ -5,22 +5,21 @@ extension Networking {
   
   public enum ConnectionState {
     case available
-    case requiresConnection
+    case unavailable
+    case noConnection
   }
   
-  @available(macOS 10.14, *)
   public class Connectivity {
-    // https://www.hackingwithswift.com/example-code/networking/how-to-check-for-internet-connectivity-using-nwpathmonitor
-    @available(iOS 12.0, *)
+    @available(iOS 12.0, macOS 10.14, *)
     private static var monitor: NWPathMonitor? = NWPathMonitor()
   }
 }
 
-@available(macOS 10.14, *)
 extension Networking.Connectivity {
+  public typealias Handler = (Networking.ConnectionState) -> Void
   
   public static func isNetworkReacability() -> Bool {
-    if #available(iOS 12.0, *) {
+    if #available(iOS 12.0, macOS 10.14, *) {
       guard
         // if there are no interfaces, the current path is none.
         let monitor = monitor,
@@ -68,40 +67,28 @@ extension Networking.Connectivity {
   }
 }
 
-// TODO: Working with the observation scenarios here in the future
-// TODO: or update minimum ios to 13
-/*
- some possible references:
- - https://stackoverflow.com/questions/30743408/check-for-internet-connection-with-swift
- - https://github.com/ashleymills/Reachability.swift
- */
-#if DEBUG
-@available(macOS 10.14, *)
+@available(iOS 12.0, macOS 10.14, *)
 extension Networking.Connectivity {
   
-  public static var monitorChangeHandlers =
-  [((Networking.ConnectionState) -> Void)]() {
+  public static var monitorChangeHandlers:
+  [Handler] = [] {
     didSet {
-      if #available(iOS 12.0, *) {
-        var newState: Networking.ConnectionState = .requiresConnection
-        // re-assign the observe events
-        monitor?.pathUpdateHandler = { path in
-          switch path.status {
-          case .satisfied:
-            newState = .available
-          case .unsatisfied:
-            newState = .requiresConnection
-          case .requiresConnection:
-            newState = .requiresConnection
-          @unknown default:
-            break
-          }
-          for handler in monitorChangeHandlers {
-            handler(newState)
-          }
+      var newState: Networking.ConnectionState = .noConnection
+      // re-assign the observe events
+      monitor?.pathUpdateHandler = { path in
+        switch path.status {
+        case .satisfied:
+          newState = .available
+        case .unsatisfied:
+          newState = .unavailable
+        case .requiresConnection:
+          newState = .noConnection
+        @unknown default:
+          break
         }
-      } else {
-        // TODO: add observe for network state change in iOS 11.0
+        for handler in monitorChangeHandlers {
+          handler(newState)
+        }
       }
     }
   }
@@ -109,18 +96,12 @@ extension Networking.Connectivity {
   static func addObserveReachabilityChange(
     handler: @escaping ((Networking.ConnectionState) -> Void)
   ) {
-    if #available(iOS 12.0, *) {
-      // start the queue if needed
-      if let _ = monitor?.queue {
-        
-      } else {
-        let queue = DispatchQueue(label: "Monitor")
-        monitor?.start(queue: queue)
-      }
-    } else {
-      // TODO: set up Reachability before the first append if needed
+    // start the queue if needed
+    if let _ = monitor?.queue { } else {
+      let queue = DispatchQueue(label: "Monitor")
+      monitor?.start(queue: queue)
     }
+    
     monitorChangeHandlers.append(handler)
   }
 }
-#endif
