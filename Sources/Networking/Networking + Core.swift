@@ -95,11 +95,12 @@ extension Networking.NetworkError: LocalizedError {
 }
 
 public protocol BaseRequest {
-  var encodedUrl: String { get set }
+  var baseURL: String { get set }
   var method: Networking.Method { get set }
-  var parameters: [String : Any?]? { get set }
   var timeOut: TimeInterval { get set }
   var authorization: Networking.Authorization? { get set }
+  var cachePolicy: URLRequest.CachePolicy { get set }
+  var parameters: [String : Any?]? { get set }
   
   init()
 }
@@ -113,25 +114,28 @@ extension BaseRequest {
   init(
     from encodedUrl: String,
     as method: Method = .post,
-    timeout: TimeInterval = 60.0,
+    timeout: TimeInterval = 10.0,
     authorization: Authorization? = nil,
+    cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy,
     parameters: [String : Any?]? = nil
   ) {
     self.init()
-    self.encodedUrl = encodedUrl
+    self.baseURL = encodedUrl
     self.method = method
     self.timeOut = timeout
     self.authorization = authorization
+    self.cachePolicy = cachePolicy
+    
     self.parameters = parameters
   }
 }
 
 extension BaseRequest {
   
-  public func request() throws -> URLRequest {
+  public func urlRequest() throws -> URLRequest {
     // encode url (to encode spaces for example)
     guard
-      let encodedUrl = self.encodedUrl
+      let encodedUrl = self.baseURL
         .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
     else {
       throw NetworkError.badUrl
@@ -144,7 +148,7 @@ extension BaseRequest {
     
     var request = URLRequest(
       url: url,
-      cachePolicy: .reloadIgnoringLocalCacheData,
+      cachePolicy: cachePolicy,
       timeoutInterval: timeOut
     )
     
@@ -200,13 +204,16 @@ extension BaseRequest {
 }
 
 public class Request: BaseRequest {
-  public var encodedUrl: String = ""
+  public var cachePolicy: URLRequest.CachePolicy
+  = .useProtocolCachePolicy
+  
+  public var baseURL: String = ""
   
   public var method: Networking.Method = .post
   
   public var parameters: [String : Any?]? = nil
   
-  public var timeOut: TimeInterval = 10.0
+  public var timeOut: TimeInterval = 60.0
   
   public var authorization: Networking.Authorization? = nil
   
