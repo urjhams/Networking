@@ -65,7 +65,7 @@ extension Networking {
     _ request: Request
   ) async throws -> (Data, HTTPURLResponse) {
     
-    let urlRequest = try request.request()
+    let urlRequest = try request.urlRequest()
     
       // try to get data from request
     let (data, response): (Data, URLResponse)
@@ -104,7 +104,7 @@ extension Networking {
     _ request: Request
   ) async throws -> ObjectType {
     
-    let urlRequest = try request.request()
+    let urlRequest = try request.urlRequest()
     
     // try to get data from request
     let (data, response): (Data, URLResponse)

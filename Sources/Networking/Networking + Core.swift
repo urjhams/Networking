@@ -105,7 +105,7 @@ public protocol BaseRequest {
   init()
 }
 
-extension BaseRequest {
+public extension BaseRequest {
   typealias Method = Networking.Method
   typealias NetworkError = Networking.NetworkError
   typealias Authorization = Networking.Authorization
@@ -130,9 +130,9 @@ extension BaseRequest {
   }
 }
 
-extension BaseRequest {
+public extension BaseRequest {
   
-  public func urlRequest() throws -> URLRequest {
+  func urlRequest() throws -> URLRequest {
     // encode url (to encode spaces for example)
     guard
       let encodedUrl = self.baseURL

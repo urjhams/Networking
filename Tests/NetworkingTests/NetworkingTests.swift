@@ -55,7 +55,7 @@ final class NetworkingTests: XCTestCase {
   
   func testBadUrl() async throws {
     let copyRequest = postRequest
-    copyRequest.encodedUrl = "https://api.m3o.com/v1/helloworld/Callllllllllll"
+    copyRequest.baseURL = "https://api.m3o.com/v1/helloworld/Callllllllllll"
     do {
       let _: Sample = try await instance.getObjectViaRequest(copyRequest)
       XCTFail("Expected to throw an error since we put a transport error")

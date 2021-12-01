@@ -15,7 +15,7 @@ extension Networking {
     completion handler: @escaping NetworkHandler
   ) {
     do {
-      let request = try request.request()
+      let request = try request.urlRequest()
       
       session.dataTask(with: request) { data, response, error in
         
@@ -86,7 +86,7 @@ extension Networking {
   ) {
     do {
       
-      let request = try request.request()
+      let request = try request.urlRequest()
       
       session.dataTask(with: request) { data, response, error in
         
