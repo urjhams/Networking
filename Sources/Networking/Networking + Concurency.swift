@@ -1,5 +1,6 @@
 import Foundation
 
+// MARK: Concurrency
 @available(swift 5.5)
 @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
 extension URLSession {
@@ -52,22 +53,18 @@ extension URLSession {
 
 @available(swift 5.5)
 @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-extension Networking {
+public extension Networking {
   
   /// Call a HTTP request. All the error handlers will stop the function immidiately
   /// - Parameters:
-  ///   - method: HTTP method, `POST` in default
-  ///   - url: plain string of the url.
-  ///   - authorization: the authorization method, such as bearer token for example
-  ///   - params: http request body's parameters.
-  /// - Returns: Data and HTTP response.
-  public func sendRequest(
+  ///   - request: the configured request object
+  func sendRequest(
     _ request: Request
   ) async throws -> (Data, HTTPURLResponse) {
     
     let urlRequest = try request.urlRequest()
     
-      // try to get data from request
+    // try to get data from request
     let (data, response): (Data, URLResponse)
     if #available(
       iOS 15.0,
@@ -94,14 +91,12 @@ extension Networking {
   
   /// Get the expected JSON - codable object via a HTTP request.
   /// - Parameters:
-  ///   - method: the desired `HTTP method`.
-  ///   - link: URL of the request in plain text.
-  ///   - timeout: request timeout.
-  ///   - authorization: The authorization of the request.
-  ///   - parameters: request's parameter.
+  ///   - objectType: The codable type of object we want to cast from the response data
+  ///   - request: the configured request object
   /// - Returns: the expected JSON object.
-  public func getObjectViaRequest<ObjectType: Codable>(
-    _ request: Request
+  func get<ObjectType: Codable>(
+    _ objectType: ObjectType.Type,
+    from request: Request
   ) async throws -> ObjectType {
     
     let urlRequest = try request.urlRequest()
@@ -129,7 +124,8 @@ extension Networking {
     }
     
     guard let object = try? JSONDecoder()
-            .decode(ObjectType.self, from: data) else {
+            .decode(objectType.self, from: data)
+    else {
       throw NetworkError.jsonFormatError
     }
     

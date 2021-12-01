@@ -58,26 +58,48 @@ networking.sendRequest(postRequest) { result in
 }
 
 // get a decoded json object from a request task
-networking.getObjectViaRequest(
-    postRequest
-  ) { (result: Networking.GenericResult<Sample>) in
-    switch result {
-    case .success(let sample):
-      // do smth with the success model with type `Sample`
-    case .failure(_):
-      break
+networking.get(
+  Sample.self,
+  from: postRequest
+) { result in
+  switch result {
+  case .success(let sample):
+    // do smth with the success model with type `Sample`
+  case .failure(_):
+    break
   }
 }
 ```
 
 ### Concurrency with async / await (available from iOS 13+, watchOS 6+, macOS 11+)
-`getObjectViaRequest(_:)` has a supported version for concurrency. All we need to do is declare the output with the expected Type for the generic requirement and apply `try await`.
+`get(_:, from:)` has a supported version for concurrency. All we need to do is declare the output with the expected Type for the generic requirement and apply `try await`.
 ```Swift
-  let sample: Sample = try await networking.getObjectViaRequest(postRequest)
+  ...
+  let sample = try await networking.get(Sample.self, from: postRequest)
   // do smth with the success model with type `Sample`
+  ...
   
   // to simply get Data and HttpResponse:
   let (data, response) = try await networking.sendRequest(postRequest)
+```
+
+### Combine usage
+```Swift
+var subcriptions = Set<AnyCancellable>()
+...
+networking
+  .publisher(for: Sample.self, from: postRequest)
+  .sink { completion in
+    switch completion {
+    case .finished:
+      break
+    case .failure(let error):
+      print("got an error: \(error.localizedDescription)")
+    }
+  } receiveValue: { sample in
+    // do something with the data received
+  }
+  .store(in: &subcriptions)
 ```
 
 ### Connectivity Observing

@@ -1,6 +1,7 @@
 import Foundation
 import Combine
 
+@available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
 public extension Networking {
   
   /// Get a publisher that receive response from a network request
@@ -72,6 +73,7 @@ public extension Networking {
   }
 }
 
+@available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
 extension Networking {
   /*
    Note: This function has the same purpose with publusher(from:) function.

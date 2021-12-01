@@ -1,16 +1,13 @@
 import Foundation
 
-// MARK: - Stabdard functions with callbacks
-extension Networking {
+// MARK: Standard
+public extension Networking {
   
   /// Call a HTTP request. All the error handlers will stop the function immidiately
   /// - Parameters:
-  ///   - method: HTTP method, `POST` in default
-  ///   - url: plain string of the url.
-  ///   - authorization: the authorization method, such as bearer token for example
-  ///   - params: http request body's parameters.
-  ///   - handler: Handling when completion, included success and failure
-  public func sendRequest(
+  ///   - request: the configured request object
+  ///   - completion: handle block with result type
+  func sendRequest(
     _ request: Request,
     completion handler: @escaping NetworkHandler
   ) {
@@ -75,13 +72,12 @@ extension Networking {
   /// Call a HTTP request with expected return JSON object.
   /// All the error handlers will stop the function immidiately
   /// - Parameters:
-  ///   - method: HTTP method, `POST` in default
-  ///   - url: plain string of the url.
-  ///   - authorization: the authorization method, such as bearer token for example
-  ///   - params: http request body's parameters.
-  ///   - handler: Handling when completion, included success and failure
-  public func getObjectViaRequest<ObjectType: Codable>(
-    _ request: Request,
+  ///   - objectType: The codable type of object we want to cast from the response data
+  ///   - request: the configured request object
+  ///   - completion: handle block with result type
+  func get<ObjectType: Codable>(
+    _ objectType: ObjectType.Type,
+    from request: Request,
     completion handler: @escaping NetworkGenericHandler<ObjectType>
   ) {
     do {
@@ -99,12 +95,13 @@ extension Networking {
         
         guard
           let response = response as? HTTPURLResponse,
-          let responseBody = data else {
-            DispatchQueue.main.async {
-              handler(.failure(NetworkError.transportError))
-            }
-            return
+          let responseBody = data
+        else {
+          DispatchQueue.main.async {
+            handler(.failure(NetworkError.transportError))
           }
+          return
+        }
         
         let statusCode = HTTPStatus(response.statusCode)
         
@@ -114,7 +111,7 @@ extension Networking {
             //handler(.success(responseBody))
             do {
               let object = try JSONDecoder()
-                .decode(ObjectType.self, from: responseBody)
+                .decode(objectType.self, from: responseBody)
               handler(.success(object))
             } catch {
               handler(.failure(error))

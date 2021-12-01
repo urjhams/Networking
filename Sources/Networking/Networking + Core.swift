@@ -1,5 +1,19 @@
 import Foundation
 
+/// convinience extension for debugging Codable object
+public extension CustomStringConvertible where Self: Codable {
+  var description: String {
+    var description = "\n \(type(of: self)) \n"
+    let mirror = Mirror(reflecting: self)
+    for child in mirror.children {
+      if let propertyName = child.label {
+        description += "\(propertyName): \(child.value)\n"
+      }
+    }
+    return description
+  }
+}
+
 public class Networking {
   
   /// shared instance of Network class
