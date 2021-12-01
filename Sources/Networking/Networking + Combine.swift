@@ -1,0 +1,92 @@
+import Foundation
+import Combine
+
+public extension Networking {
+  
+  /// Get a publisher that receive response from a network request
+  /// - Parameter request: the configured request object
+  /// - Returns: Return a publisher that manage data type and error
+  func publisher(
+    from request: Request
+  ) -> AnyPublisher<Data, Error> {
+    do {
+      let urlRequest = try request.urlRequest()
+      return session
+        .dataTaskPublisher(for: urlRequest)
+        .tryMap { data, response in
+          guard
+            let response = response as? HTTPURLResponse
+          else {
+            throw NetworkError.transportError
+          }
+          
+          let statusCode = HTTPStatus(response.statusCode)
+          
+          if case .success = statusCode {
+            return data
+          } else {
+            throw NetworkError.downloadServerSideError(statusCode: statusCode)
+          }
+        }
+        .eraseToAnyPublisher()
+    } catch {
+      return Fail(error: error)
+        .eraseToAnyPublisher()
+    }
+  }
+  
+  /// Get a publisher that receive response from a network request
+  /// - Parameters:
+  ///   - type: The codable type of object we want to cast from the response data
+  ///   - request: the configured request object
+  /// - Returns: Return a publisher that manage desired data type and error
+  func publisher<T>(
+    for type: T.Type,
+    from request: Request
+  ) -> AnyPublisher<T, Error> where T: Codable {
+    do {
+      let urlRequest = try request.urlRequest()
+      return session
+        .dataTaskPublisher(for: urlRequest)
+        .tryMap { data, response in
+          guard
+            let response = response as? HTTPURLResponse
+          else {
+            throw NetworkError.transportError
+          }
+          
+          let statusCode = HTTPStatus(response.statusCode)
+          
+          if case .success = statusCode {
+            return data
+          } else {
+            throw NetworkError.downloadServerSideError(statusCode: statusCode)
+          }
+        }
+        .decode(type: T.self, decoder: JSONDecoder())
+        .eraseToAnyPublisher()
+    } catch {
+      return Fail(error: error)
+        .eraseToAnyPublisher()
+    }
+  }
+}
+
+extension Networking {
+  /*
+   Note: This function has the same purpose with publusher(from:) function.
+   It is just a practice of consuming Combine with a call back function
+   So I just keep this function here as a reference,
+   not visible for end library user
+   */
+  func getPublisher<T>(
+    from request: Request
+  ) -> AnyPublisher<T, Error> where T: Codable {
+    return Deferred {
+      Future { [unowned self] promise in
+        self.get(T.self, from: request, completion: promise)
+      }
+    }
+    .eraseToAnyPublisher()
+  }
+}
