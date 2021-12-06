@@ -47,9 +47,11 @@ final class NetworkingTests: XCTestCase {
       description: "The return should be: `message` : `Hello Quan`"
     )
     
-    let sample = try await instance.get(Sample.self, from: postRequest)
+    async let sample = instance.get(Sample.self, from: postRequest)
     
-    if sample.message == "Hello Quan" {
+    let message = try await sample.message
+    
+    if message == "Hello Quan" {
       expectation.fulfill()
     }
     
@@ -200,11 +202,13 @@ final class NetworkingTests: XCTestCase {
       Future<Sample, Error> { [unowned self] promise in
         Task {
           do {
-            let result = try await self
+            async let result = self
               .instance
               .get(Sample.self, from: self.postRequest)
-            print("result: \(result)")
-            promise(.success(result))
+            
+            print("result: \(try await result)")
+            
+            try await promise(.success(result))
           } catch {
             print("error: \(error.localizedDescription)")
             promise(.failure(error))
