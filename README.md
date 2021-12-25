@@ -19,7 +19,7 @@ Formalized API requests calling by using URLSession.
 ```Swift
 dependencies: [
         .package(
-            url: "git@github.com:urjhams/Networking.git",
+            url: "git@github.com:VJA-Plus-JSC/Networking.git",
             from: "1.0.0"
         )
     ]
