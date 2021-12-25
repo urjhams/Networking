@@ -1,6 +1,6 @@
 import Foundation
 
-/// convinience extension for debugging Codable object
+/// convenience extension for debugging Codable object
 public extension CustomStringConvertible where Self: Codable {
   var description: String {
     var description = "\n \(type(of: self)) \n"

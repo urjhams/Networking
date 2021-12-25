@@ -76,7 +76,7 @@ public extension Networking {
 @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
 extension Networking {
   /*
-   Note: This function has the same purpose with publusher(from:) function.
+   Note: This function has the same purpose with publisher(from:) function.
    It is just a practice of consuming Combine with a call back function
    So I just keep this function here as a reference,
    not visible for end library user

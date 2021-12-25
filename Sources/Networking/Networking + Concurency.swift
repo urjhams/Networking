@@ -6,7 +6,7 @@ import Foundation
 extension URLSession {
   /// Apply data task with async/ await for the lower OS that still support concurency
   ///
-  /// Eventhough Concurency is avalable from iOS 13 now, it's a Language feature.
+  /// Even though Concurency is available from iOS 13 now, it's a Language feature.
   /// Apple did not provide any async APIs for the SDKs under 15+ like URLSession.
   /// So we use a trick that wrapping the standard function (with callbacks) in
   /// `withCheckedThrowingContinuation` to use async / await to it.
@@ -22,17 +22,17 @@ extension URLSession {
   @available(
     tvOS,
     deprecated: 15.0,
-    message: "Decrpecated! Use data(for request:, delegate:) instead"
+    message: "Deprecated! Use data(for request:, delegate:) instead"
   )
   @available(
     macOS,
     deprecated: 12.0,
-    message: "Decrpecated! Use data(for request:, delegate:) instead"
+    message: "Deprecated! Use data(for request:, delegate:) instead"
   )
   @available(
     watchOS,
     deprecated: 8.0,
-    message: "Decrpecated! Use data(for request:, delegate:) instead"
+    message: "Deprecated! Use data(for request:, delegate:) instead"
   )
   func data(from request: URLRequest) async throws -> (Data, URLResponse) {
     // Wrap the standard callback api in withCheckedThrowingContinuation
@@ -55,7 +55,7 @@ extension URLSession {
 @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
 public extension Networking {
   
-  /// Call a HTTP request. All the error handlers will stop the function immidiately
+  /// Call a HTTP request. All the error handlers will stop the function immediately
   /// - Parameters:
   ///   - request: the configured request object
   func sendRequest(
