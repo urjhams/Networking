@@ -7,7 +7,7 @@ extension URLSession {
   /// Apply data task with async/ await for the lower OS that still support concurency
   ///
   /// Eventhough Concurency is avalable from iOS 13 now, it's a Language feature.
-  /// Apple ddid not provide any async APIs for the SDKs under 15+ like URLSession.
+  /// Apple did not provide any async APIs for the SDKs under 15+ like URLSession.
   /// So we use a trick that wrapping the standard function (with callbacks) in
   /// `withCheckedThrowingContinuation` to use async / await to it.
   /// Concurency is now available for iOS 13, etc. However, the other Apple's SDK like
@@ -79,11 +79,13 @@ public extension Networking {
       (data, response) = try await URLSession.shared.data(from: urlRequest)
     }
     
-    guard
-      let httpResponse = response as? HTTPURLResponse,
-      HTTPStatus(httpResponse.statusCode) == .success
-    else {
+    guard let httpResponse = response as? HTTPURLResponse else {
       throw NetworkError.transportError
+    }
+    
+    guard HTTPStatus(httpResponse.statusCode) == .success else {
+      let statusCode = HTTPStatus(httpResponse.statusCode)
+      throw NetworkError.httpSeverSideError(data, statusCode: statusCode)
     }
     
     return (data, httpResponse)
@@ -116,11 +118,13 @@ public extension Networking {
       (data, response) = try await URLSession.shared.data(from: urlRequest)
     }
     
-    guard
-      let httpResponse = response as? HTTPURLResponse,
-      HTTPStatus(httpResponse.statusCode) == .success
-    else {
+    guard let httpResponse = response as? HTTPURLResponse else {
       throw NetworkError.transportError
+    }
+    
+    guard HTTPStatus(httpResponse.statusCode) == .success else {
+      let statusCode = HTTPStatus(httpResponse.statusCode)
+      throw NetworkError.httpSeverSideError(data, statusCode: statusCode)
     }
     
     guard let object = try? JSONDecoder()

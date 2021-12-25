@@ -26,7 +26,7 @@ public extension Networking {
           if case .success = statusCode {
             return data
           } else {
-            throw NetworkError.downloadServerSideError(statusCode: statusCode)
+            throw NetworkError.httpSeverSideError(data, statusCode: statusCode)
           }
         }
         .eraseToAnyPublisher()
@@ -61,7 +61,7 @@ public extension Networking {
           if case .success = statusCode {
             return data
           } else {
-            throw NetworkError.downloadServerSideError(statusCode: statusCode)
+            throw NetworkError.httpSeverSideError(data, statusCode: statusCode)
           }
         }
         .decode(type: T.self, decoder: JSONDecoder())
