@@ -18,7 +18,7 @@ extension Networking {
 extension Networking.Connectivity {
   public typealias Handler = (Networking.ConnectionState) -> Void
   
-  public static func isNetworkReacability() -> Bool {
+  public static func isNetworkReachability() -> Bool {
     if #available(iOS 12.0, macOS 10.14, *) {
       guard
         // if there are no interfaces, the current path is none.

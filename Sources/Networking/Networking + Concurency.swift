@@ -17,7 +17,7 @@ extension URLSession {
   @available(
     iOS,
     deprecated: 15.0,
-    message: "Decrpecated! Use data(for request:, delegate:) instead"
+    message: "Deprecated! Use data(for request:, delegate:) instead"
   )
   @available(
     tvOS,
