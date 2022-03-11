@@ -3,8 +3,8 @@ import Combine
 @testable import Networking
 
 // Here we use sample API from https://m3o.com/helloworld
-final class NetworkingTests: XCTestCase {
-  struct Sample: Codable {
+final class NetworkingTests: XCTestCase, @unchecked Sendable {
+  struct Sample: Codable, @unchecked Sendable {
     var message: String = ""
   }
   
@@ -197,9 +197,9 @@ final class NetworkingTests: XCTestCase {
       description: "The return should be: `message` : `Hello Quan`"
     )
     
-    var subcriptions = Set<AnyCancellable>()
+    var subscription = Set<AnyCancellable>()
     Deferred {
-      Future<Sample, Error> { [unowned self] promise in
+        Future<Sample, Error> { [unowned self] promise in
         Task {
           do {
             async let result = self
@@ -231,7 +231,7 @@ final class NetworkingTests: XCTestCase {
         expectation.fulfill()
       }
     }
-    .store(in: &subcriptions)
+    .store(in: &subscription)
     
     wait(for: [expectation], timeout: 5.0)
   }
