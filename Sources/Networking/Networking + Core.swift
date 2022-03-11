@@ -14,7 +14,9 @@ public extension CustomStringConvertible where Self: Codable {
   }
 }
 
-public class Networking {
+extension URLSession: @unchecked Sendable {}
+
+public final class Networking: Sendable {
   
   /// shared instance of Network class
   public static let shared = Networking()
