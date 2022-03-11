@@ -14,7 +14,9 @@ public extension CustomStringConvertible where Self: Codable {
   }
 }
 
-public class Networking {
+extension URLSession: @unchecked Sendable {}
+
+public final class Networking: Sendable {
   
   /// shared instance of Network class
   public static let shared = Networking()
@@ -47,11 +49,18 @@ public class Networking {
     case badRequestParameters([String: Any?])
     case jsonFormatError
     case downloadServerSideError(statusCode: HTTPStatus)
+    case badRequestAuthorization
   }
   
   public enum Authorization {
+    //TODO: support digestAuth
+    // https://developer.apple.com/documentation/foundation/url_loading_system/handling_an_authentication_challenge
+    // TODO: support OAuth 1.0, oAuth2, hawAuth, AWSSignature
+    case basicAuth(userName: String, password: String)
     case bearerToken(token: String?)
+    case apiKey(key: String, value: String)
   }
+  
   
   /// Possible status code, will get raw value as 0 for the `unknown` case
   /// - 1xxs – `Informational responses`: The server is thinking through the request.
@@ -104,6 +113,8 @@ extension Networking.NetworkError: LocalizedError {
     case .downloadServerSideError(let statusCode):
       let code = statusCode.rawValue
       return "⛔️ There is a http server error with status code \(code)."
+    case .badRequestAuthorization:
+      return "⛔️ There is a problem with the request authorization header"
     }
   }
 }
@@ -149,7 +160,8 @@ public extension BaseRequest {
   func urlRequest() throws -> URLRequest {
     // encode url (to encode spaces for example)
     guard
-      let encodedUrl = self.baseURL
+      let encodedUrl = self
+        .baseURL
         .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
     else {
       throw NetworkError.badUrl
@@ -169,18 +181,43 @@ public extension BaseRequest {
     request.httpMethod = method.rawValue
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     
+    var configParameters = parameters
+    
     // add Authorization information if has
     if let authorization = authorization {
-      if case let .bearerToken(token) = authorization,
-         let bearerToken = token {
+      switch authorization {
+      case .basicAuth(let username, let password):
+        let authString = "\(username):\(password)"
+        guard let data = authString.data(using: .utf8) else {
+          throw NetworkError.badRequestAuthorization
+        }
+        let base64 = data.base64EncodedString()
+        request.setValue(
+          "Basic \(base64)",
+          forHTTPHeaderField: "Authorization"
+        )
+      case .bearerToken(let token):
+        guard let bearerToken = token else {
+          throw NetworkError.badRequestAuthorization
+        }
         request.setValue(
           "Bearer \(bearerToken)",
           forHTTPHeaderField: "Authorization"
         )
+      case .apiKey(let key, let value):
+        if case .get = method {
+          if configParameters == nil {
+            configParameters = [key: value]
+          } else {
+            configParameters![key] = value
+          }
+        } else {
+          request.setValue(value, forHTTPHeaderField: key)
+        }
       }
     }
     
-    guard let parameters = self.parameters else {
+    guard let parameters = configParameters else {
       return request
     }
     
@@ -218,8 +255,7 @@ public extension BaseRequest {
 }
 
 public class Request: BaseRequest {
-  public var cachePolicy: URLRequest.CachePolicy
-  = .useProtocolCachePolicy
+  public var cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
   
   public var baseURL: String = ""
   

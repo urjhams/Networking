@@ -51,9 +51,9 @@ let postRequest = Request(
 networking.sendRequest(postRequest) { result in
   switch result {
   case .success(let data):
-    // do smth with the data
+    // do something with the data
   case .failure(let error):
-    // do smth with the error
+    // do something with the error
   }
 }
 
@@ -64,7 +64,7 @@ networking.get(
 ) { result in
   switch result {
   case .success(let sample):
-    // do smth with the success model with type `Sample`
+    // do something with the success model with type `Sample`
   case .failure(_):
     break
   }
@@ -76,7 +76,7 @@ networking.get(
 ```Swift
   ...
   let sample = try await networking.get(Sample.self, from: postRequest)
-  // do smth with the success model with type `Sample`
+  // do something with the success model with type `Sample`
   ...
   
   // to simply get Data and HttpResponse:
@@ -85,7 +85,7 @@ networking.get(
 
 ### Combine usage
 ```Swift
-var subcriptions = Set<AnyCancellable>()
+var subscription = Set<AnyCancellable>()
 ...
 networking
   .publisher(for: Sample.self, from: postRequest)
@@ -99,20 +99,20 @@ networking
   } receiveValue: { sample in
     // do something with the data received
   }
-  .store(in: &subcriptions)
+  .store(in: &subscription)
 ```
 
 ### Connectivity Observing
-from iOS 12.0+, macOS 10.14+, the connectivity can be monitor via the `monitor` object. This object is a static object. All we need to do is append the desired handle via `Network.Connectivity.monitorChangeHandlers` static property. This stack up a list of handles we want call whenever there is a change of each network availibility state, and we can stack a handle from everywhere in the project.
+from iOS 12.0+, macOS 10.14+, the connectivity can be monitor via the `monitor` object. This object is a static object. All we need to do is append the desired handle via `Network.Connectivity.monitorChangeHandlers` static property. This stack up a list of handles we want call whenever there is a change of each network availability state, and we can stack a handle from everywhere in the project.
 ```Swift
 let handler: Networking.Connectivity.Handler  = { state in
   switch state {
   case .available:
-    // do smth
+    // do something
   case .unavailable:
-    // do smth
+    // do something
   case .noConnection:
-    // do smth
+    // do something
   }
 }
 
