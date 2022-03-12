@@ -50,6 +50,7 @@ public final class Networking: Sendable {
     case jsonFormatError
     case downloadServerSideError(statusCode: HTTPStatus)
     case badRequestAuthorization
+    case unknown
   }
   
   public enum Authorization {
@@ -115,6 +116,8 @@ extension Networking.NetworkError: LocalizedError {
       return "⛔️ There is a http server error with status code \(code)."
     case .badRequestAuthorization:
       return "⛔️ There is a problem with the request authorization header"
+    case .unknown:
+      return "⛔️ unknown network error"
     }
   }
 }
@@ -254,7 +257,7 @@ public extension BaseRequest {
   }
 }
 
-public class Request: BaseRequest {
+public final class Request: BaseRequest, @unchecked Sendable {
   public var cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
   
   public var baseURL: String = ""

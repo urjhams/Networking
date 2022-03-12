@@ -58,6 +58,7 @@ public extension Networking {
   /// Call a HTTP request. All the error handlers will stop the function immediately
   /// - Parameters:
   ///   - request: the configured request object
+  /// - Returns: the response data and information
   func sendRequest(
     _ request: Request
   ) async throws -> (Data, HTTPURLResponse) {
@@ -91,12 +92,33 @@ public extension Networking {
     return (data, httpResponse)
   }
   
+  /// Call a HTTP request. All the error handlers will stop the function immediately
+  /// - Parameters:
+  ///   - request: the configured request object
+  /// - Returns: the response data or error
+  func send(_ request: Request) async -> Result<Data, NetworkError> {
+    do {
+      let response = try await sendRequest(request)
+      let status = HTTPStatus(response.1.statusCode)
+      switch status {
+      case .success:
+        return .success(response.0)
+      case .unknown:
+        return .failure(.unknown)
+      default:
+        return .failure(.httpSeverSideError(response.0, statusCode: status))
+      }
+    } catch {
+      return .failure(.unknown)
+    }
+  }
+  
   /// Get the expected JSON - codable object via a HTTP request.
   /// - Parameters:
   ///   - objectType: The codable type of object we want to cast from the response data
   ///   - request: the configured request object
   /// - Returns: the expected JSON object.
-  func get<ObjectType: Codable>(
+  func getObject<ObjectType: Codable>(
     _ objectType: ObjectType.Type,
     from request: Request
   ) async throws -> ObjectType {
@@ -134,5 +156,22 @@ public extension Networking {
     }
     
     return object
+  }
+  
+  /// Safety get the expected JSON - codable object via a HTTP request.
+  /// - Parameters:
+  ///   - objectType: The codable type of object we want to cast from the response data
+  ///   - request: the configured request object
+  /// - Returns: the expected JSON object or Error
+  func get<ObjectType: Codable>(
+    _ objectType: ObjectType.Type,
+    from request: Request
+  ) async -> Result<ObjectType, NetworkError> {
+    do {
+      let object = try await getObject(objectType, from: request)
+      return .success(object)
+    } catch {
+      return .failure(.unknown)
+    }
   }
 }
