@@ -254,7 +254,7 @@ public extension BaseRequest {
   }
 }
 
-public class Request: BaseRequest {
+public final class Request: BaseRequest, @unchecked Sendable {
   public var cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
   
   public var baseURL: String = ""
