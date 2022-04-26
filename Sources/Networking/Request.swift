@@ -1,4 +1,5 @@
 import Foundation
+import CryptoKit
 
 public protocol BaseRequest {
   var baseURL: String { get set }
@@ -36,16 +37,35 @@ public extension BaseRequest {
   }
 }
 
+enum Signature {
+  case md5(String)
+  
+  var plain: String {
+    switch self {
+    case .md5(let secret):
+      let digest = Insecure.MD5.hash(data: secret.data(using: .utf8)) ?? Data()
+      
+      return digest.map{ String(format: "%02hhx", $0) }.joined()
+    }
+  }
+  
+}
+
 public extension BaseRequest {
   
-  func urlRequest() throws -> URLRequest {
+  func urlRequest(singed signature: Signature? = nil) throws -> URLRequest {
     // encode url (to encode spaces for example)
     guard
-      let encodedUrl = self
+      var encodedUrl = self
         .baseURL
         .addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed)
     else {
       throw NetworkError.badUrl
+    }
+    
+    if let signature = signature {
+      let signatureString = signature.plain
+      encodedUrl = "\(encodedUrl)&signature=\(signatureString)"
     }
     
     guard let url = URL(string: encodedUrl) else {
@@ -53,6 +73,7 @@ public extension BaseRequest {
       throw NetworkError.badUrl
     }
     
+
     var request = URLRequest(
       url: url,
       cachePolicy: cachePolicy,
@@ -63,7 +84,7 @@ public extension BaseRequest {
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
     
     var configParameters = parameters
-    
+        
     // add Authorization information if has
     if let authorization = authorization {
       switch authorization {
