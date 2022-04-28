@@ -37,13 +37,13 @@ public extension BaseRequest {
   }
 }
 
-enum Signature {
+public enum Signature {
   case md5(String)
   
   var plain: String {
     switch self {
     case .md5(let secret):
-      let digest = Insecure.MD5.hash(data: secret.data(using: .utf8)) ?? Data()
+      let digest = Insecure.MD5.hash(data: secret.data(using: .utf8) ?? Data())
       
       return digest.map{ String(format: "%02hhx", $0) }.joined()
     }

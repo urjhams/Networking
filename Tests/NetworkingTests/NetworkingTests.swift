@@ -47,7 +47,7 @@ final class NetworkingTests: XCTestCase, @unchecked Sendable {
       description: "The return should be: `message` : `Hello Quan`"
     )
     
-    async let sample = instance.get(Sample.self, from: postRequest)
+    async let sample = instance.getObject(Sample.self, from: postRequest)
     
     let message = try await sample.message
     
@@ -63,7 +63,7 @@ final class NetworkingTests: XCTestCase, @unchecked Sendable {
     let copyRequest = postRequest
     copyRequest.baseURL = "https://api.m3o.com/v1/helloworld/Callllllllllll"
     do {
-      let _ = try await instance.get(Sample.self, from: copyRequest)
+      let _ = try await instance.getObject(Sample.self, from: copyRequest)
       XCTFail("Expected to throw an error since we put a transport error")
     } catch {
       switch error {
@@ -204,7 +204,7 @@ final class NetworkingTests: XCTestCase, @unchecked Sendable {
           do {
             async let result = self
               .instance
-              .get(Sample.self, from: self.postRequest)
+              .getObject(Sample.self, from: self.postRequest)
             
             print("result: \(try await result)")
             
