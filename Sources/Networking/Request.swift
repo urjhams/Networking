@@ -39,6 +39,7 @@ public extension BaseRequest {
 
 public enum Signature {
   case md5(String)
+  case plain(String)
   
   var plain: String {
     switch self {
@@ -46,6 +47,8 @@ public enum Signature {
       let digest = Insecure.MD5.hash(data: secret.data(using: .utf8) ?? Data())
       
       return digest.map{ String(format: "%02hhx", $0) }.joined()
+    case .plain(let plain):
+      return plain
     }
   }
   
@@ -63,7 +66,7 @@ public extension BaseRequest {
       throw NetworkError.badUrl
     }
     
-    if let signature = signature {
+    if let signature = signature, case .md5(_) = signature {
       let signatureString = signature.plain
       encodedUrl = "\(encodedUrl)&signature=\(signatureString)"
     }
@@ -82,6 +85,10 @@ public extension BaseRequest {
     
     request.httpMethod = method.rawValue
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
+    
+    if case .plain(let keyword) = signature {
+      request.setValue(keyword, forHTTPHeaderField: "Signature")
+    }
     
     var configParameters = parameters
         
