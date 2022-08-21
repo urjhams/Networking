@@ -59,6 +59,7 @@ public extension Networking {
   /// - Parameters:
   ///   - request: the configured request object
   /// - Returns: the response data and information
+  @discardableResult
   func sendRequest(
     _ request: Request
   ) async throws -> (Data, HTTPURLResponse) {
