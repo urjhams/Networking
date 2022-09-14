@@ -38,13 +38,13 @@ public extension Networking {
   
   /// Get a publisher that receive response from a network request
   /// - Parameters:
-  ///   - type: The codable type of object we want to cast from the response data
+  ///   - type: The Decodable type of object we want to cast from the response data
   ///   - request: the configured request object
   /// - Returns: Return a publisher that manage desired data type and error
   func publisher<T>(
     for type: T.Type,
     from request: Request
-  ) -> AnyPublisher<T, Error> where T: Codable {
+  ) -> AnyPublisher<T, Error> where T: Decodable {
     do {
       let urlRequest = try request.urlRequest()
       return session
@@ -83,7 +83,7 @@ extension Networking {
    */
   func getPublisher<T>(
     from request: Request
-  ) -> AnyPublisher<T, Error> where T: Codable {
+  ) -> AnyPublisher<T, Error> where T: Decodable {
     return Deferred {
       Future { [unowned self] promise in
         self.get(T.self, from: request, completion: promise)

@@ -72,14 +72,14 @@ public extension Networking {
   /// Call a HTTP request with expected return JSON object.
   /// All the error handlers will stop the function immidiately
   /// - Parameters:
-  ///   - objectType: The codable type of object we want to cast from the response data
+  ///   - objectType: The Decodable type of object we want to cast from the response data
   ///   - request: the configured request object
   ///   - completion: handle block with result type
-  func get<ObjectType: Codable>(
+  func get<ObjectType>(
     _ objectType: ObjectType.Type,
     from request: Request,
     completion handler: @escaping NetworkGenericHandler<ObjectType>
-  ) {
+  ) where ObjectType: Decodable {
     do {
       
       let request = try request.urlRequest()

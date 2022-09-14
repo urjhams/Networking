@@ -114,15 +114,15 @@ public extension Networking {
     }
   }
   
-  /// Get the expected JSON - codable object via a HTTP request.
+  /// Get the expected JSON - Decodable object via a HTTP request.
   /// - Parameters:
-  ///   - objectType: The codable type of object we want to cast from the response data
+  ///   - objectType: The Decodable type of object we want to cast from the response data
   ///   - request: the configured request object
   /// - Returns: the expected JSON object.
-  func getObject<ObjectType: Codable>(
+  func getObject<ObjectType>(
     _ objectType: ObjectType.Type,
     from request: Request
-  ) async throws -> ObjectType {
+  ) async throws -> ObjectType where ObjectType: Decodable {
     
     let urlRequest = try request.urlRequest()
     
@@ -159,15 +159,15 @@ public extension Networking {
     return object
   }
   
-  /// Safety get the expected JSON - codable object via a HTTP request.
+  /// Safety get the expected JSON - Decodable object via a HTTP request.
   /// - Parameters:
-  ///   - objectType: The codable type of object we want to cast from the response data
+  ///   - objectType: The Decodable type of object we want to cast from the response data
   ///   - request: the configured request object
   /// - Returns: the expected JSON object or Error
-  func get<ObjectType: Codable>(
+  func get<ObjectType>(
     _ objectType: ObjectType.Type,
     from request: Request
-  ) async -> Result<ObjectType, NetworkError> {
+  ) async -> Result<ObjectType, NetworkError> where ObjectType: Decodable {
     do {
       let object = try await getObject(objectType, from: request)
       return .success(object)

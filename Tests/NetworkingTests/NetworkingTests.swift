@@ -4,7 +4,7 @@ import Combine
 
 // Here we use sample API from https://m3o.com/helloworld
 final class NetworkingTests: XCTestCase, @unchecked Sendable {
-  struct Sample: Codable, @unchecked Sendable {
+  struct Sample: Decodable, @unchecked Sendable {
     var message: String = ""
   }
   

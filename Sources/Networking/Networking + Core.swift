@@ -1,7 +1,7 @@
 import Foundation
 
-/// convenience extension for debugging Codable object
-public extension CustomStringConvertible where Self: Codable {
+/// convenience extension for debugging Decodable object
+public extension CustomStringConvertible where Self: Decodable {
   var description: String {
     var description = "\n \(type(of: self)) \n"
     let mirror = Mirror(reflecting: self)
@@ -26,10 +26,10 @@ public final class Networking: Sendable {
   /// network handle closure
   public typealias NetworkHandler = (Result<Data, Error>) -> ()
   
-  public typealias GenericResult<T: Codable> = Result<T, Error>
+  public typealias GenericResult<T: Decodable> = Result<T, Error>
   
   // network handle generic closure
-  public typealias NetworkGenericHandler<T: Codable> = (GenericResult<T>) -> ()
+  public typealias NetworkGenericHandler<T: Decodable> = (GenericResult<T>) -> ()
   
   /// private init to avoid unexpected instances allocate
   private init() {}
