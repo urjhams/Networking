@@ -1,9 +1,9 @@
-import XCTest
+import Testing
 import Combine
 @testable import Networking
 
 // Here we use sample API from https://m3o.com/helloworld
-final class NetworkingTests: XCTestCase, @unchecked Sendable {
+struct NetworkingTests: @unchecked Sendable {
   struct Sample: Decodable, @unchecked Sendable {
     var message: String = ""
   }
@@ -19,68 +19,48 @@ final class NetworkingTests: XCTestCase, @unchecked Sendable {
     parameters: ["name" : "Quan"]
   )
   
-  func testStandard() throws {
+  @Test("Test the original call with result handler block")
+  func standard() throws {
     
-    let expectation = XCTestExpectation(
-      description: "The return should be: `message` : `Hello Quan`"
-    )
     instance.get(
       Sample.self,
       from: postRequest
     ) { result in
       switch result {
       case .success(let sample):
-        if sample.message == "Hello Quan" {
-          expectation.fulfill()
-        }
+        #expect(sample.message == "Hello Quan", "The return should be: `message` : `Hello Quan`")
       case .failure(_):
+        Issue.record("The return should be success")
         break
       }
+      
     }
-    wait(for: [expectation], timeout: 5.0)
   }
   
   @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-  func testConcurency() async throws {
-    
-    let expectation = XCTestExpectation(
-      description: "The return should be: `message` : `Hello Quan`"
-    )
+  @Test("Concurrency test with async await")
+  func concurency() async throws {
     
     async let sample = instance.getObject(Sample.self, from: postRequest)
     
     let message = try await sample.message
     
-    if message == "Hello Quan" {
-      expectation.fulfill()
-    }
-    
-    wait(for: [expectation], timeout: 5.0)
+    #expect(message == "Hello Quan", "The return should be: `message` : `Hello Quan`")
   }
   
   @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-  func testError() async throws {
+  @Test("Error testing")
+  func error() async throws {
     let copyRequest = postRequest
     copyRequest.baseURL = "https://api.m3o.com/v1/helloworld/Callllllllllll"
-    do {
-      let _ = try await instance.getObject(Sample.self, from: copyRequest)
-      XCTFail("Expected to throw an error since we put a transport error")
-    } catch {
-      switch error {
-      case Networking.NetworkError.transportError:
-        XCTAssertTrue(true)
-      default:
-        XCTFail("Expected to throw a transport error instead")
-      }
+    await #expect(throws: Networking.NetworkError.transportError) {
+      try await instance.getObject(Sample.self, from: copyRequest)
     }
   }
   
   @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-  func testCombine() throws {
-    let expectation = XCTestExpectation(
-      description: "The return should be: `message` : `Hello Quan`"
-    )
-    
+  @Test("Combine framework test")
+  func combine() throws {
     var subcriptions = Set<AnyCancellable>()
     
     instance
@@ -90,29 +70,23 @@ final class NetworkingTests: XCTestCase, @unchecked Sendable {
         case .finished:
           break
         case .failure(let error):
-          print("got an error: \(error.localizedDescription)")
+          Issue.record("got an error: \(error.localizedDescription)")
         }
       } receiveValue: { sample in
-        if sample.message == "Hello Quan" {
-          print(sample)
-          expectation.fulfill()
-        }
+        #expect(sample.message == "Hello Quan", "The return should be: `message` : `Hello Quan`")
       }
       .store(in: &subcriptions)
     
-    wait(for: [expectation], timeout: 5.0)
   }
   
   @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-  func testCombineUseWithStandard() throws {
-    let expectation = XCTestExpectation(
-      description: "The return should be: `message` : `Hello Quan`"
-    )
+  @Test("Combien framework test with standard call")
+  func vombineUseWithStandard() throws {
     
     var subcriptions = Set<AnyCancellable>()
     
     Deferred {
-      Future { [unowned self] promise in
+      Future { promise in
         self
           .instance
           .get(Sample.self, from: self.postRequest, completion: promise)
@@ -124,50 +98,36 @@ final class NetworkingTests: XCTestCase, @unchecked Sendable {
       case .finished:
         break
       case .failure(let error):
-        print("got an error: \(error.localizedDescription)")
+        Issue.record("got an error: \(error.localizedDescription)")
       }
     } receiveValue: { sample in
-      if sample.message == "Hello Quan" {
-        print(sample)
-        expectation.fulfill()
-      }
+      #expect(sample.message == "Hello Quan", "The return should be: `message` : `Hello Quan`")
     }
     .store(in: &subcriptions)
     
-    wait(for: [expectation], timeout: 5.0)
   }
   
   @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-  func testConcurencyUseWithStandard() async throws {
+  @Test("Test concurency mix with standard call")
+  func concurencyUseWithStandard() async throws {
     
-    let expectation = XCTestExpectation(
-      description: "The return should be: `message` : `Hello Quan`"
-    )
-    
-    let sample =
-    try await withCheckedThrowingContinuation { [unowned self] continuation in
+    let sample = try await withCheckedThrowingContinuation { continuation in
       self.instance.get(Sample.self, from: self.postRequest) { result in
         continuation.resume(with: result)
       }
     }
     
-    if sample.message == "Hello Quan" {
-      expectation.fulfill()
-    }
-    
-    wait(for: [expectation], timeout: 5.0)
+    #expect(sample.message == "Hello Quan", "The return should be: `message` : `Hello Quan`")
   }
   
   @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-  func testConcurencyUseWithCombine() async throws {
-    let expectation = XCTestExpectation(
-      description: "The return should be: `message` : `Hello Quan`"
-    )
+  @Test("Test concurrency mix with combine framework usage")
+  func concurencyUseWithCombine() async throws {
     
     var subcriptions = Set<AnyCancellable>()
     
     let sample: Sample =
-    try await withCheckedThrowingContinuation { [unowned self] continuation in
+    try await withCheckedThrowingContinuation { continuation in
       self
         .instance
         .publisher(for: Sample.self, from: self.postRequest)
@@ -184,24 +144,18 @@ final class NetworkingTests: XCTestCase, @unchecked Sendable {
         .store(in: &subcriptions)
     }
     
-    if sample.message == "Hello Quan" {
-      expectation.fulfill()
-    }
-    
-    wait(for: [expectation], timeout: 5.0)
+    #expect(sample.message == "Hello Quan", "The return should be: `message` : `Hello Quan`")
   }
   
   @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-  func testCombineUseWithConcurency() async throws {
-    let expectation = XCTestExpectation(
-      description: "The return should be: `message` : `Hello Quan`"
-    )
+  @Test("Test combine framwork mix with concurency call")
+  func combineUseWithConcurency() async throws {
     
     var subscription = Set<AnyCancellable>()
     Deferred {
-        Future<Sample, Error> { [unowned self] promise in
+        Future<Sample, Error> { promise in
         Task {
-          do {
+          #expect(throws: Never.self) {
             async let result = self
               .instance
               .getObject(Sample.self, from: self.postRequest)
@@ -209,9 +163,6 @@ final class NetworkingTests: XCTestCase, @unchecked Sendable {
             print("result: \(try await result)")
             
             try await promise(.success(result))
-          } catch {
-            print("error: \(error.localizedDescription)")
-            promise(.failure(error))
           }
         }
       }
@@ -222,17 +173,11 @@ final class NetworkingTests: XCTestCase, @unchecked Sendable {
       case .finished:
         print("finished")
       case .failure(let error):
-        print("got an error: \(error.localizedDescription)")
+        Issue.record(error, "got an error: \(error.localizedDescription)")
       }
     } receiveValue: { sample in
-      print(sample)
-      if sample.message == "Hello Quan" {
-        print(sample)
-        expectation.fulfill()
-      }
+      #expect(sample.message == "Hello Quan", "The return should be: `message` : `Hello Quan`")
     }
     .store(in: &subscription)
-    
-    wait(for: [expectation], timeout: 5.0)
   }
 }
