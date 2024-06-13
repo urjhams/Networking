@@ -42,7 +42,7 @@ public final class Networking: Sendable {
     case patch = "PATCH"
   }
   
-  public enum NetworkError: Error {
+  public enum NetworkError: Error, Equatable {
     case badUrl
     case transportError
     case httpSeverSideError(Data, statusCode: HTTPStatus)
@@ -51,6 +51,25 @@ public final class Networking: Sendable {
     case downloadServerSideError(statusCode: HTTPStatus)
     case badRequestAuthorization
     case unknown
+    
+    public static func == (lhs: NetworkError, rhs: NetworkError) -> Bool {
+      return switch (rhs, lhs) {
+      case (.badUrl, .badUrl),
+        (.transportError, .transportError),
+        (.jsonFormatError, .jsonFormatError),
+        (.badRequestAuthorization, .badRequestAuthorization),
+        (.unknown, .unknown):
+        true
+      case (.httpSeverSideError(let data1, let status1), .httpSeverSideError(let data2, let status2)):
+        data1 == data2 && status1 == status2
+      case (.badRequestParameters(let p1), .badRequestParameters(let p2)):
+        NSDictionary(dictionary: p1 as [AnyHashable : Any]).isEqual(to: p2 as [AnyHashable : Any])
+      case (.downloadServerSideError(let status1), .downloadServerSideError(let status2)):
+        status1 == status2
+      default:
+        false
+      }
+    }
   }
   
   public enum Authorization {
