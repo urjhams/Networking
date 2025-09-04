@@ -56,12 +56,12 @@ extension Networking {
             task.resume()
         }
         
-        /// This will suspend the download task without terminal it
+        /// This will suspend the download task without terminate it
         func suspend() {
             task.suspend()
         }
         
-        // this will cancel and terminal the download task
+        // this will cancel and terminate the download task
         func cancel() {
             task.cancel()
         }
@@ -90,7 +90,11 @@ extension Networking {
             return downloadTask
         }
         
-        func didReceiveResponse(_ response: URLResponse, for dataTask: URLSessionDataTask, completionHandler: @Sendable @escaping (URLSession.ResponseDisposition) -> Void) {
+        func didReceiveResponse(
+            _ response: URLResponse, 
+            for dataTask: URLSessionDataTask, 
+            completionHandler: @Sendable @escaping (URLSession.ResponseDisposition) -> Void
+        ) {
             guard let task = queue.first(where: { $0.task == dataTask }) else {
                 completionHandler(.cancel)
                 return

@@ -78,11 +78,33 @@ public actor Networking {
   
   public enum Authorization {
     // https://developer.apple.com/documentation/foundation/url_loading_system/handling_an_authentication_challenge
-    // TODO: support OAuth 1.0, oAuth2, hawAuth, AWSSignature
     case basicAuth(userName: String, password: String)
     case digestAuth(userName: String, password: String, realm: String, nonce: String, uri: String, qop: String? = nil, nc: String? = nil, cnonce: String? = nil)
     case bearerToken(token: String?)
     case apiKey(key: String, value: String)
+    
+    // OAuth 1.0 - RFC 5849
+    case oauth1(consumerKey: String, consumerSecret: String, token: String?, tokenSecret: String?, signature: OAuth1Signature = .hmacSha1)
+    
+    // OAuth 2.0 - RFC 6749
+    case oauth2(accessToken: String, tokenType: String = "Bearer")
+    
+    // Hawk Authentication - RFC draft
+    case hawk(id: String, key: String, algorithm: HawkAlgorithm = .sha256)
+    
+    // AWS Signature Version 4
+    case awsSignature(accessKey: String, secretKey: String, region: String, service: String, sessionToken: String? = nil)
+  }
+  
+  public enum OAuth1Signature: String, Sendable {
+    case hmacSha1 = "HMAC-SHA1"
+    case hmacSha256 = "HMAC-SHA256"
+    case plaintext = "PLAINTEXT"
+  }
+  
+  public enum HawkAlgorithm: String, Sendable {
+    case sha1 = "sha1"
+    case sha256 = "sha256"
   }
   
   
