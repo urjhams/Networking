@@ -90,7 +90,7 @@ extension Networking {
             return downloadTask
         }
         
-        func didReceiveResponse(_ response: URLResponse, for dataTask: URLSessionDataTask, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+        func didReceiveResponse(_ response: URLResponse, for dataTask: URLSessionDataTask, completionHandler: @Sendable @escaping (URLSession.ResponseDisposition) -> Void) {
             guard let task = queue.first(where: { $0.task == dataTask }) else {
                 completionHandler(.cancel)
                 return
@@ -105,9 +105,10 @@ extension Networking {
             }
             task.buffer.append(data)
             let percentage = Double(task.buffer.count) / Double(task.expectedContentLength)
+            let handler = task.progressHandler
             
             Task { @MainActor in
-                task.progressHandler?(percentage)
+                handler?(percentage)
             }
         }
         
@@ -117,19 +118,22 @@ extension Networking {
             }
             
             let task = queue.remove(at: index)
+            let handler = task.completionHandler
+            let buffer = task.buffer
+            
             Task { @MainActor in
                 guard let error = error else {
-                    task.completionHandler?(.success(task.buffer))
+                    handler?(.success(buffer))
                     return
                 }
-                task.completionHandler?(.failure(error))
+                handler?(.failure(error))
             }
         }
     }
 }
 
 extension Networking {
-    final class DownloadSessionDelegate: NSObject, URLSessionDataDelegate {
+    final class DownloadSessionDelegate: NSObject, URLSessionDataDelegate, @unchecked Sendable {
         weak var downloadQueue: DownloadQueue?
         
         override init() {
@@ -140,7 +144,7 @@ extension Networking {
             _ session: URLSession,
             dataTask: URLSessionDataTask,
             didReceive response: URLResponse,
-            completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+            completionHandler: @Sendable @escaping (URLSession.ResponseDisposition) -> Void
         ) {
             Task {
                 await downloadQueue?.didReceiveResponse(response, for: dataTask, completionHandler: completionHandler)

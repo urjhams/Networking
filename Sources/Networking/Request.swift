@@ -211,7 +211,7 @@ public extension BaseRequest {
     // for GET, add directly to the url
     switch method {
     case .post, .put, .patch:
-      let anyParams = parameters.mapValues { $0 as Any? }
+      let anyParams = parameters.compactMapValues { $0?.anyValue }
       guard
         let json = try? JSONSerialization.data(withJSONObject: anyParams, options: [])
       else {

@@ -45,12 +45,12 @@ public actor Networking {
     case put = "PUT"
     case patch = "PATCH"
   }
-  
-  public enum NetworkError: Error, Equatable, Sendable {
+
+  public enum NetworkError: Error, Equatable {
     case badUrl
     case transportError
     case httpSeverSideError(Data, statusCode: HTTPStatus)
-    case badRequestParameters(String)
+    case badRequestParameters([String: Sendable?])
     case jsonFormatError
     case downloadServerSideError(statusCode: HTTPStatus)
     case badRequestAuthorization
@@ -67,7 +67,7 @@ public actor Networking {
       case (.httpSeverSideError(let data1, let status1), .httpSeverSideError(let data2, let status2)):
         data1 == data2 && status1 == status2
       case (.badRequestParameters(let p1), .badRequestParameters(let p2)):
-        p1 == p2
+        NSDictionary(dictionary: p1 as [AnyHashable : Any]).isEqual(to: p2 as [AnyHashable : Any])
       case (.downloadServerSideError(let status1), .downloadServerSideError(let status2)):
         status1 == status2
       default:

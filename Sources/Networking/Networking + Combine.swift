@@ -86,7 +86,14 @@ extension Networking {
   ) -> AnyPublisher<T, Error> where T: Decodable {
     return Deferred {
       Future { [unowned self] promise in
-        self.get(T.self, from: request, completion: promise)
+        Task {
+          do {
+            let result = try await self.getObject(T.self, from: request)
+            promise(.success(result))
+          } catch {
+            promise(.failure(error))
+          }
+        }
       }
     }
     .eraseToAnyPublisher()
