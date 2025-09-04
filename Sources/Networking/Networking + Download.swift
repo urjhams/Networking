@@ -28,8 +28,8 @@ public protocol DownloadTask {
 }
 
 extension Networking {
-    public typealias DownloadHandler = (Result<Data, Error>) -> ()
-    public typealias ProcessHandler = (Double) -> Void
+    public typealias DownloadHandler = @Sendable (Result<Data, Error>) -> ()
+    public typealias ProcessHandler = @Sendable (Double) -> Void
     
     class GenericDownloadTask: DownloadTask {
         var completionHandler: DownloadHandler?
@@ -69,16 +69,18 @@ extension Networking {
 }
 
 extension Networking {
-    public final class DownloadQueue: NSObject {
-        private var session: URLSession!
+    public actor DownloadQueue {
+        private let session: URLSession
         private var queue: [GenericDownloadTask] = []
+        private let delegate: DownloadSessionDelegate
         
         public static let shared = DownloadQueue()
         
-        private override init() {
-            super.init()
+        private init() {
             let configuration = URLSessionConfiguration.default
-            session = URLSession(configuration: configuration, delegate: self, delegateQueue: nil)
+            delegate = DownloadSessionDelegate()
+            session = URLSession(configuration: configuration, delegate: delegate, delegateQueue: nil)
+            delegate.downloadQueue = self
         }
         
         public func downloadTask(from request: URLRequest) -> DownloadTask {
@@ -87,52 +89,78 @@ extension Networking {
             queue.append(downloadTask)
             return downloadTask
         }
+        
+        func didReceiveResponse(_ response: URLResponse, for dataTask: URLSessionDataTask, completionHandler: @escaping (URLSession.ResponseDisposition) -> Void) {
+            guard let task = queue.first(where: { $0.task == dataTask }) else {
+                completionHandler(.cancel)
+                return
+            }
+            task.expectedContentLength = response.expectedContentLength
+            completionHandler(.allow)
+        }
+        
+        func didReceiveData(_ data: Data, for dataTask: URLSessionDataTask) {
+            guard let task = queue.first(where: { $0.task == dataTask }) else {
+                return
+            }
+            task.buffer.append(data)
+            let percentage = Double(task.buffer.count) / Double(task.expectedContentLength)
+            
+            Task { @MainActor in
+                task.progressHandler?(percentage)
+            }
+        }
+        
+        func didCompleteWithError(_ error: Error?, for sessionTask: URLSessionTask) {
+            guard let index = queue.firstIndex(where: { $0.task == sessionTask }) else {
+                return
+            }
+            
+            let task = queue.remove(at: index)
+            Task { @MainActor in
+                guard let error = error else {
+                    task.completionHandler?(.success(task.buffer))
+                    return
+                }
+                task.completionHandler?(.failure(error))
+            }
+        }
     }
 }
 
-extension Networking.DownloadQueue: URLSessionDataDelegate {
-    public func urlSession(
-        _ session: URLSession,
-        dataTask: URLSessionDataTask,
-        didReceive response: URLResponse,
-        completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
-    ) {
-        guard let task = queue.first(where: { $0.task == dataTask }) else {
-            completionHandler(.cancel)
-            return
-        }
-        task.expectedContentLength = response.expectedContentLength
-        completionHandler(.allow)
-    }
-    
-    public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
-        guard let task = queue.first(where: { $0.task == dataTask }) else {
-            return
-        }
-        task.buffer.append(data)
-        let percentage = Double(task.buffer.count) / Double(task.expectedContentLength)
+extension Networking {
+    final class DownloadSessionDelegate: NSObject, URLSessionDataDelegate {
+        weak var downloadQueue: DownloadQueue?
         
-        DispatchQueue.main.async {
-            task.progressHandler?(percentage)
-        }
-    }
-    
-    public func urlSession(
-        _ session: URLSession,
-        task: URLSessionTask,
-        didCompleteWithError error: Error?
-    ) {
-        guard let index = queue.firstIndex(where: { $0.task == task }) else {
-            return
+        override init() {
+            super.init()
         }
         
-        let task = queue.remove(at: index)
-        DispatchQueue.main.async {
-            guard let error = error else {
-                task.completionHandler?(.success(task.buffer))
-                return
+        public func urlSession(
+            _ session: URLSession,
+            dataTask: URLSessionDataTask,
+            didReceive response: URLResponse,
+            completionHandler: @escaping (URLSession.ResponseDisposition) -> Void
+        ) {
+            Task {
+                await downloadQueue?.didReceiveResponse(response, for: dataTask, completionHandler: completionHandler)
             }
-            task.completionHandler?(.failure(error))
+        }
+        
+        public func urlSession(_ session: URLSession, dataTask: URLSessionDataTask, didReceive data: Data) {
+            Task {
+                await downloadQueue?.didReceiveData(data, for: dataTask)
+            }
+        }
+        
+        public func urlSession(
+            _ session: URLSession,
+            task: URLSessionTask,
+            didCompleteWithError error: Error?
+        ) {
+            Task {
+                await downloadQueue?.didCompleteWithError(error, for: task)
+            }
         }
     }
 }

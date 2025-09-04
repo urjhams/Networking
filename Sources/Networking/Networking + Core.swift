@@ -28,12 +28,12 @@ public actor Networking {
   }
   
   /// network handle closure
-  public typealias NetworkHandler = (Result<Data, Error>) -> ()
+  public typealias NetworkHandler = @Sendable (Result<Data, Error>) -> ()
   
   public typealias GenericResult<T: Decodable> = Result<T, Error>
   
   // network handle generic closure
-  public typealias NetworkGenericHandler<T: Decodable> = (GenericResult<T>) -> ()
+  public typealias NetworkGenericHandler<T: Decodable> = @Sendable (GenericResult<T>) -> ()
   
   /// private init to avoid unexpected instances allocate
   private init() {}
@@ -46,7 +46,7 @@ public actor Networking {
     case patch = "PATCH"
   }
   
-  public enum NetworkError: Error, Equatable {
+  public enum NetworkError: Error, Equatable, Sendable {
     case badUrl
     case transportError
     case httpSeverSideError(Data, statusCode: HTTPStatus)

@@ -1,13 +1,32 @@
 import Foundation
 import CryptoKit
 
+/// A Sendable-conforming type that can hold various parameter values
+public enum ParameterValue: Sendable {
+  case string(String)
+  case int(Int)
+  case double(Double) 
+  case bool(Bool)
+  case null
+  
+  var anyValue: Any {
+    switch self {
+    case .string(let value): return value
+    case .int(let value): return value
+    case .double(let value): return value
+    case .bool(let value): return value
+    case .null: return NSNull()
+    }
+  }
+}
+
 public protocol BaseRequest {
   var baseURL: String { get set }
   var method: Networking.Method { get set }
   var timeOut: TimeInterval { get set }
   var authorization: Networking.Authorization? { get set }
   var cachePolicy: URLRequest.CachePolicy { get set }
-  var parameters: [String : AnyHashable?]? { get set }
+  var parameters: [String : ParameterValue?]? { get set }
   
   init()
 }
@@ -24,7 +43,7 @@ public extension BaseRequest {
     timeout: TimeInterval = 10.0,
     authorization: Authorization? = nil,
     cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy,
-    parameters: [String : AnyHashable?]? = nil
+    parameters: [String : ParameterValue?]? = nil
   ) {
     self.init()
     self.baseURL = encodedUrl
@@ -174,9 +193,9 @@ public extension BaseRequest {
       case .apiKey(let key, let value):
         if case .get = method {
           if configParameters == nil {
-            configParameters = [key: value]
+            configParameters = [key: ParameterValue.string(value)]
           } else {
-            configParameters![key] = value
+            configParameters![key] = ParameterValue.string(value)
           }
         } else {
           request.setValue(value, forHTTPHeaderField: key)
@@ -196,7 +215,7 @@ public extension BaseRequest {
       guard
         let json = try? JSONSerialization.data(withJSONObject: anyParams, options: [])
       else {
-        throw NetworkError.badRequestParameters(String(describing: parameters))
+        throw NetworkError.badRequestParameters(parameters)
       }
       request.httpBody = json
     case .get, .delete:
@@ -206,7 +225,7 @@ public extension BaseRequest {
       
       finalUrl.queryItems = parameters.map { key, value in
         // in case value is nil, replace by blank space instead
-        URLQueryItem(name: key, value: String(describing: value ?? "" as AnyHashable))
+        URLQueryItem(name: key, value: String(describing: value?.anyValue ?? ""))
       }
       
       finalUrl.percentEncodedQuery = finalUrl
@@ -228,7 +247,7 @@ public final class Request: BaseRequest, @unchecked Sendable {
   
   public var method: Networking.Method = .post
   
-  public var parameters: [String : AnyHashable?]? = nil
+  public var parameters: [String : ParameterValue?]? = nil
   
   public var timeOut: TimeInterval = 60.0
   
