@@ -7,7 +7,7 @@ public protocol BaseRequest {
   var timeOut: TimeInterval { get set }
   var authorization: Networking.Authorization? { get set }
   var cachePolicy: URLRequest.CachePolicy { get set }
-  var parameters: [String : Any?]? { get set }
+  var parameters: [String : AnyHashable?]? { get set }
   
   init()
 }
@@ -24,7 +24,7 @@ public extension BaseRequest {
     timeout: TimeInterval = 10.0,
     authorization: Authorization? = nil,
     cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy,
-    parameters: [String : Any?]? = nil
+    parameters: [String : AnyHashable?]? = nil
   ) {
     self.init()
     self.baseURL = encodedUrl
@@ -55,6 +55,44 @@ public enum Signature {
 }
 
 public extension BaseRequest {
+  
+  private func generateDigestResponse(
+    username: String,
+    password: String,
+    realm: String,
+    nonce: String,
+    uri: String,
+    method: String,
+    qop: String? = nil,
+    nc: String? = nil,
+    cnonce: String? = nil
+  ) throws -> String {
+    // HA1 = MD5(username:realm:password)
+    let ha1String = "\(username):\(realm):\(password)"
+    let ha1Data = ha1String.data(using: .utf8) ?? Data()
+    let ha1Hash = Insecure.MD5.hash(data: ha1Data)
+    let ha1 = ha1Hash.map { String(format: "%02hhx", $0) }.joined()
+    
+    // HA2 = MD5(method:uri)
+    let ha2String = "\(method):\(uri)"
+    let ha2Data = ha2String.data(using: .utf8) ?? Data()
+    let ha2Hash = Insecure.MD5.hash(data: ha2Data)
+    let ha2 = ha2Hash.map { String(format: "%02hhx", $0) }.joined()
+    
+    // Response calculation
+    let responseString: String
+    if let qop = qop, let nc = nc, let cnonce = cnonce {
+      // Response = MD5(HA1:nonce:nc:cnonce:qop:HA2)
+      responseString = "\(ha1):\(nonce):\(nc):\(cnonce):\(qop):\(ha2)"
+    } else {
+      // Response = MD5(HA1:nonce:HA2)
+      responseString = "\(ha1):\(nonce):\(ha2)"
+    }
+    
+    let responseData = responseString.data(using: .utf8) ?? Data()
+    let responseHash = Insecure.MD5.hash(data: responseData)
+    return responseHash.map { String(format: "%02hhx", $0) }.joined()
+  }
   
   func urlRequest(singed signature: Signature? = nil) throws -> URLRequest {
     // encode url (to encode spaces for example)
@@ -105,6 +143,26 @@ public extension BaseRequest {
           "Basic \(base64)",
           forHTTPHeaderField: "Authorization"
         )
+      case .digestAuth(let username, let password, let realm, let nonce, let uri, let qop, let nc, let cnonce):
+        let response = try generateDigestResponse(
+          username: username,
+          password: password,
+          realm: realm,
+          nonce: nonce,
+          uri: uri,
+          method: method.rawValue,
+          qop: qop,
+          nc: nc,
+          cnonce: cnonce
+        )
+        
+        var digestHeader = "Digest username=\"\(username)\", realm=\"\(realm)\", nonce=\"\(nonce)\", uri=\"\(uri)\", response=\"\(response)\""
+        
+        if let qop = qop, let nc = nc, let cnonce = cnonce {
+          digestHeader += ", qop=\(qop), nc=\(nc), cnonce=\"\(cnonce)\""
+        }
+        
+        request.setValue(digestHeader, forHTTPHeaderField: "Authorization")
       case .bearerToken(let token):
         guard let bearerToken = token else {
           throw NetworkError.badRequestAuthorization
@@ -134,11 +192,11 @@ public extension BaseRequest {
     // for GET, add directly to the url
     switch method {
     case .post, .put, .patch:
+      let anyParams = parameters.mapValues { $0 as Any? }
       guard
-        let json = try? JSONSerialization
-          .data(withJSONObject: parameters, options: [])
+        let json = try? JSONSerialization.data(withJSONObject: anyParams, options: [])
       else {
-        throw NetworkError.badRequestParameters(parameters)
+        throw NetworkError.badRequestParameters(String(describing: parameters))
       }
       request.httpBody = json
     case .get, .delete:
@@ -148,7 +206,7 @@ public extension BaseRequest {
       
       finalUrl.queryItems = parameters.map { key, value in
         // in case value is nil, replace by blank space instead
-        URLQueryItem(name: key, value: String(describing: value ?? ""))
+        URLQueryItem(name: key, value: String(describing: value ?? "" as AnyHashable))
       }
       
       finalUrl.percentEncodedQuery = finalUrl
@@ -170,7 +228,7 @@ public final class Request: BaseRequest, @unchecked Sendable {
   
   public var method: Networking.Method = .post
   
-  public var parameters: [String : Any?]? = nil
+  public var parameters: [String : AnyHashable?]? = nil
   
   public var timeOut: TimeInterval = 60.0
   

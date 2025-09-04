@@ -61,7 +61,8 @@ public extension Networking {
   /// - Returns: the response data and information
   @discardableResult
   func sendRequest(
-    _ request: Request
+    _ request: Request,
+    session: URLSession = .shared
   ) async throws -> (Data, HTTPURLResponse) {
     
     let urlRequest = try request.urlRequest()
@@ -76,9 +77,9 @@ public extension Networking {
       macCatalyst 15.0,
       *
     ) {
-      (data, response) = try await URLSession.shared.data(for: urlRequest)
+      (data, response) = try await session.data(for: urlRequest)
     } else {
-      (data, response) = try await URLSession.shared.data(from: urlRequest)
+      (data, response) = try await session.data(from: urlRequest)
     }
     
     guard let httpResponse = response as? HTTPURLResponse else {
@@ -97,9 +98,9 @@ public extension Networking {
   /// - Parameters:
   ///   - request: the configured request object
   /// - Returns: the response data or error
-  func send(_ request: Request) async -> Result<Data, NetworkError> {
+  func send(_ request: Request, session: URLSession = .shared) async -> Result<Data, Networking.NetworkError> {
     do {
-      let response = try await sendRequest(request)
+      let response = try await sendRequest(request, session: session)
       let status = HTTPStatus(response.1.statusCode)
       switch status {
       case .success:
@@ -121,11 +122,11 @@ public extension Networking {
   /// - Returns: the expected JSON object.
   func getObject<ObjectType>(
     _ objectType: ObjectType.Type,
-    from request: Request
+    from request: Request,
+    session: URLSession = .shared
   ) async throws -> ObjectType where ObjectType: Decodable {
     
     let urlRequest = try request.urlRequest()
-    
     // try to get data from request
     let (data, response): (Data, URLResponse)
     if #available(
@@ -136,9 +137,9 @@ public extension Networking {
       macCatalyst 15.0,
       *
     ) {
-      (data, response) = try await URLSession.shared.data(for: urlRequest)
+      (data, response) = try await session.data(for: urlRequest)
     } else {
-      (data, response) = try await URLSession.shared.data(from: urlRequest)
+      (data, response) = try await session.data(from: urlRequest)
     }
     
     guard let httpResponse = response as? HTTPURLResponse else {
@@ -149,7 +150,7 @@ public extension Networking {
       let statusCode = HTTPStatus(httpResponse.statusCode)
       throw NetworkError.httpSeverSideError(data, statusCode: statusCode)
     }
-    
+        
     guard let object = try? JSONDecoder()
             .decode(objectType.self, from: data)
     else {
@@ -166,10 +167,11 @@ public extension Networking {
   /// - Returns: the expected JSON object or Error
   func get<ObjectType>(
     _ objectType: ObjectType.Type,
-    from request: Request
-  ) async -> Result<ObjectType, NetworkError> where ObjectType: Decodable {
+    from request: Request,
+    session: URLSession = .shared
+  ) async -> Result<ObjectType, Networking.NetworkError> where ObjectType: Decodable {
     do {
-      let object = try await getObject(objectType, from: request)
+      let object = try await getObject(objectType, from: request, session: session)
       return .success(object)
     } catch {
       return .failure(.unknown)

@@ -16,12 +16,16 @@ public extension CustomStringConvertible where Self: Decodable {
 
 extension URLSession: @unchecked Sendable {}
 
-public final class Networking: Sendable {
+public actor Networking {
   
   /// shared instance of Network class
   public static let shared = Networking()
   
-  internal let session = URLSession.shared
+  internal var session = URLSession.shared
+  
+  public func set(_ session: URLSession = .shared) {
+    self.session = session
+  }
   
   /// network handle closure
   public typealias NetworkHandler = (Result<Data, Error>) -> ()
@@ -46,7 +50,7 @@ public final class Networking: Sendable {
     case badUrl
     case transportError
     case httpSeverSideError(Data, statusCode: HTTPStatus)
-    case badRequestParameters([String: Any?])
+    case badRequestParameters(String)
     case jsonFormatError
     case downloadServerSideError(statusCode: HTTPStatus)
     case badRequestAuthorization
@@ -63,7 +67,7 @@ public final class Networking: Sendable {
       case (.httpSeverSideError(let data1, let status1), .httpSeverSideError(let data2, let status2)):
         data1 == data2 && status1 == status2
       case (.badRequestParameters(let p1), .badRequestParameters(let p2)):
-        NSDictionary(dictionary: p1 as [AnyHashable : Any]).isEqual(to: p2 as [AnyHashable : Any])
+        p1 == p2
       case (.downloadServerSideError(let status1), .downloadServerSideError(let status2)):
         status1 == status2
       default:
@@ -73,10 +77,10 @@ public final class Networking: Sendable {
   }
   
   public enum Authorization {
-    //TODO: support digestAuth
     // https://developer.apple.com/documentation/foundation/url_loading_system/handling_an_authentication_challenge
     // TODO: support OAuth 1.0, oAuth2, hawAuth, AWSSignature
     case basicAuth(userName: String, password: String)
+    case digestAuth(userName: String, password: String, realm: String, nonce: String, uri: String, qop: String? = nil, nc: String? = nil, cnonce: String? = nil)
     case bearerToken(token: String?)
     case apiKey(key: String, value: String)
   }
@@ -94,7 +98,7 @@ public final class Networking: Sendable {
   /// appears when a page doesn’t exist on the site.)
   /// - 5xxs – `Server errors`: Failure. A valid request was made
   /// by the client but the server failed to complete the request.
-  public enum HTTPStatus: Int {
+  public enum HTTPStatus: Int, Sendable {
     case unknown
     
     case success = 200

@@ -7,6 +7,16 @@ public extension Networking {
   /// - Parameters:
   ///   - request: the configured request object
   ///   - completion: handle block with result type
+  @available(
+    iOS,
+    deprecated: 13.0,
+    message: "This function is no longer supported"
+  )
+  @available(
+    macOS,
+    deprecated: 12.0,
+    message: "This function is no longer supported"
+  )
   func sendRequest(
     _ request: Request,
     completion handler: @escaping NetworkHandler
@@ -75,6 +85,16 @@ public extension Networking {
   ///   - objectType: The Decodable type of object we want to cast from the response data
   ///   - request: the configured request object
   ///   - completion: handle block with result type
+  @available(
+    iOS,
+    deprecated: 13.0,
+    message: "This function is no longer supported"
+  )
+  @available(
+    macOS,
+    deprecated: 12.0,
+    message: "This function is no longer supported"
+  )
   func get<ObjectType>(
     _ objectType: ObjectType.Type,
     from request: Request,
