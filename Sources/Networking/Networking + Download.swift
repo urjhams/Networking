@@ -104,10 +104,19 @@ extension Networking {
                 return
             }
             task.buffer.append(data)
+            
+            // IMPORTANT: Must capture these values OUTSIDE the Task to prevent data races
+            // - percentage: Calculated from current actor state, must be captured before crossing actor boundary
+            // - handler: Actor-isolated property that could be modified by other threads
+            // If we access task.progressHandler directly inside Task { @MainActor in }, it would:
+            // 1. Cross actor isolation boundaries unsafely
+            // 2. Risk data race if another thread modifies task.progressHandler between Task creation and execution
+            // 3. Violate Swift 6 strict concurrency rules
             let percentage = Double(task.buffer.count) / Double(task.expectedContentLength)
             let handler = task.progressHandler
             
             Task { @MainActor in
+                // Safe to use captured local variables - no actor boundary crossing
                 handler?(percentage)
             }
         }
@@ -118,10 +127,16 @@ extension Networking {
             }
             
             let task = queue.remove(at: index)
+            
+            // IMPORTANT: Must capture actor-isolated properties OUTSIDE the Task
+            // - handler: Could be modified by other threads after Task creation
+            // - buffer: Actor-isolated data that must be captured atomically
+            // This prevents data races when crossing from DownloadQueue actor to MainActor
             let handler = task.completionHandler
             let buffer = task.buffer
             
             Task { @MainActor in
+                // Safe to use captured local variables - no concurrent access issues
                 guard let error = error else {
                     handler?(.success(buffer))
                     return
