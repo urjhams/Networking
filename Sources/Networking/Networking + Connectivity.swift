@@ -1,9 +1,10 @@
 import Network
 import SystemConfiguration
+import Foundation
 
 extension Networking {
   
-  public enum ConnectionState {
+  public enum ConnectionState: Sendable {
     case available
     case unavailable
     case noConnection
@@ -11,12 +12,12 @@ extension Networking {
   
   public class Connectivity {
     @available(iOS 12.0, macOS 10.14, *)
-    private static var monitor: NWPathMonitor? = NWPathMonitor()
+    private static let monitor: NWPathMonitor? = NWPathMonitor()
   }
 }
 
 extension Networking.Connectivity {
-  public typealias Handler = (Networking.ConnectionState) -> Void
+  public typealias Handler = @Sendable (Networking.ConnectionState) -> Void
   
   public static func isNetworkReachability() -> Bool {
     if #available(iOS 12.0, macOS 10.14, *) {
@@ -70,12 +71,12 @@ extension Networking.Connectivity {
 @available(iOS 12.0, macOS 10.14, *)
 extension Networking.Connectivity {
   
-  public static var monitorChangeHandlers:
-  [Handler] = [] {
+  @MainActor
+  public static var monitorChangeHandlers: [Handler] = [] {
     didSet {
-      var newState: Networking.ConnectionState = .noConnection
       // re-assign the observe events
       monitor?.pathUpdateHandler = { path in
+        let newState: Networking.ConnectionState
         switch path.status {
         case .satisfied:
           newState = .available
@@ -84,20 +85,24 @@ extension Networking.Connectivity {
         case .requiresConnection:
           newState = .noConnection
         @unknown default:
-          break
+          newState = .noConnection
         }
-        for handler in monitorChangeHandlers {
-          handler(newState)
+        
+        Task { @MainActor in
+          for handler in monitorChangeHandlers {
+            handler(newState)
+          }
         }
       }
     }
   }
   
+  @MainActor
   static func addObserveReachabilityChange(
-    handler: @escaping ((Networking.ConnectionState) -> Void)
+    handler: @escaping Handler
   ) {
     // start the queue if needed
-    if let _ = monitor?.queue { } else {
+    if monitor?.queue == nil {
       let queue = DispatchQueue(label: "Monitor")
       monitor?.start(queue: queue)
     }
