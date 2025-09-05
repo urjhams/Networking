@@ -12,8 +12,8 @@ struct ConnectivityTests {
     Networking.Connectivity.monitorChangeHandlers = []
     let before = Networking.Connectivity.monitorChangeHandlers.count
 
-    let noop: Networking.Connectivity.Handler = { _ in }
-    Networking.Connectivity.addObserveReachabilityChange(handler: noop)
+    let noOp: Networking.Connectivity.Handler = { _ in }
+    Networking.Connectivity.addObserveReachabilityChange(handler: noOp)
 
     let after = Networking.Connectivity.monitorChangeHandlers.count
     #expect(after == before + 1)
