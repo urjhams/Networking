@@ -13,9 +13,6 @@ import Networking
 /// A lightweight URLProtocol that lets tests supply a per-request handler.
 /// This avoids hardcoded URLs/tokens and keeps stubbing local to each test.
 final class MockURLProtocol: URLProtocol {
-  /// Simple shared handler for tests. Can be overridden by individual tests.
-  /// If `nil`, responses are resolved via `MockServer.resolve(_:)`.
-  nonisolated(unsafe) static var requestHandler: ((URLRequest) throws -> (HTTPURLResponse, Data))?
 
   override class func canInit(with request: URLRequest) -> Bool {
     // Intercept all requests for the URLSession that installs this protocol.
@@ -28,12 +25,7 @@ final class MockURLProtocol: URLProtocol {
 
   override func startLoading() {
     do {
-      let (response, data): (HTTPURLResponse, Data)
-      if let handler = Self.requestHandler {
-        (response, data) = try handler(request)
-      } else {
-        (response, data) = try MockServer.resolve(request)
-      }
+      let (response, data) = try MockServer.resolve(request)
       client?.urlProtocol(self, didReceive: response, cacheStoragePolicy: .notAllowed)
       client?.urlProtocol(self, didLoad: data)
       client?.urlProtocolDidFinishLoading(self)

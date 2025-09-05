@@ -15,11 +15,19 @@ enum MockServer {
     }
 
     func matches(_ request: URLRequest) -> Bool {
-      if let method = method, request.httpMethod?.uppercased() != method.uppercased() { return false }
-      if let path = path, request.url?.path != path { return false }
+      if let method = method, request.httpMethod?.uppercased() != method.uppercased() {
+        return false
+      }
+      
+      if let path = path, request.url?.path != path {
+        return false 
+      }
+      
       if let headers = headers {
         for (k, v) in headers {
-          if request.value(forHTTPHeaderField: k) != v { return false }
+          if request.value(forHTTPHeaderField: k) != v { 
+            return false 
+          }
         }
       }
       return true
@@ -50,8 +58,12 @@ enum MockServer {
     queue.sync { defaultHandler = handler }
   }
 
-  static func register(matcher: Matcher, once: Bool = false, priority: Int = 0,
-                       handler: @escaping (URLRequest) throws -> (HTTPURLResponse, Data)) {
+  static func register(
+    matcher: Matcher,
+     once: Bool = false, 
+     priority: Int = 0,
+    handler: @escaping (URLRequest) throws -> (HTTPURLResponse, Data)
+  ) {
     queue.sync { stubs.append(Stub(matcher: matcher, once: once, priority: priority, handler: handler)) }
   }
 
@@ -81,12 +93,11 @@ enum MockServer {
           (s.matcher.method == nil ? 0 : 1) +
           (s.matcher.path == nil ? 0 : 1) +
           (s.matcher.headers?.count ?? 0)
-        if s.priority > bestPriority ||
-            (s.priority == bestPriority && (score > bestScore ||
-             (score == bestScore && (bestIndex == nil || idx > bestIndex!)))) {
-          bestIndex = idx
-          bestScore = score
-          bestPriority = s.priority
+        if s.priority > bestPriority || 
+          (s.priority == bestPriority && (score > bestScore || (score == bestScore && (bestIndex == nil || idx > bestIndex!)))) {
+            bestIndex = idx
+            bestScore = score
+            bestPriority = s.priority
         }
       }
 
@@ -112,10 +123,12 @@ enum MockServer {
 
   // MARK: - Response helpers
   static func response(_ request: URLRequest, status: Int, headers: [String: String]? = nil) -> HTTPURLResponse {
-    HTTPURLResponse(url: request.url ?? URL(string: "about:blank")!,
-                    statusCode: status,
-                    httpVersion: nil,
-                    headerFields: headers)!
+    HTTPURLResponse(
+      url: request.url ?? URL(string: "about:blank")!,
+      statusCode: status,
+      httpVersion: nil,
+      headerFields: headers
+    )!
   }
 
   static func jsonData(_ object: Any) throws -> Data {
