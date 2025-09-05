@@ -1,5 +1,5 @@
 
-.swiftpm/xcode/package.xcworkspace/contents.xcworkspacedata
-.swiftpm/xcode/package.xcworkspace/xcuserdata/quandinh.xcuserdatad/UserInterfaceState.xcuserstate
-.swiftpm/xcode/xcuserdata/quandinh.xcuserdatad/xcschemes/xcschememanagement.plist
+.build/
+.swiftpm/
+.DS_Store
 *.pcm
