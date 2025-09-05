@@ -101,7 +101,7 @@ struct CombineTests: @unchecked Sendable {
 
   @Test("Combine publisher HTTP error")
   func publisherHttpError() async throws {
-    var wrong = request
+    let wrong = request
     wrong.baseURL = "https://local-testing.com/greetingggg"
     let pub = await instance.publisher(for: Sample.self, from: wrong)
 
