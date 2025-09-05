@@ -1,15 +1,15 @@
+import Foundation
 import Network
 import SystemConfiguration
-import Foundation
 
 extension Networking {
-  
+
   public enum ConnectionState: Sendable {
     case available
     case unavailable
     case noConnection
   }
-  
+
   public class Connectivity {
     @available(iOS 12.0, macOS 10.14, *)
     private static let monitor: NWPathMonitor? = NWPathMonitor()
@@ -18,7 +18,7 @@ extension Networking {
 
 extension Networking.Connectivity {
   public typealias Handler = @Sendable (Networking.ConnectionState) -> Void
-  
+
   public static func isNetworkReachability() -> Bool {
     if #available(iOS 12.0, macOS 10.14, *) {
       guard
@@ -33,17 +33,18 @@ extension Networking.Connectivity {
       return isReachability()
     }
   }
-  
+
   /// Check reachability in iOS lower than 12
   /// - Returns: is Network status reachability or not
   private static func isReachability() -> Bool {
     var zeroAddress = sockaddr_in()
     zeroAddress.sin_len = UInt8(MemoryLayout.size(ofValue: zeroAddress))
     zeroAddress.sin_family = sa_family_t(AF_INET)
-    
+
     guard
       let defaultRouteReachability = withUnsafePointer(
-        to:&zeroAddress, {
+        to: &zeroAddress,
+        {
           $0.withMemoryRebound(
             to: sockaddr.self,
             capacity: 1
@@ -55,22 +56,22 @@ extension Networking.Connectivity {
     else {
       return false
     }
-    
-    var flags : SCNetworkReachabilityFlags = []
+
+    var flags: SCNetworkReachabilityFlags = []
     if !SCNetworkReachabilityGetFlags(defaultRouteReachability, &flags) {
       return false
     }
-    
+
     let isReachable = flags.contains(.reachable)
     let needsConnection = flags.contains(.connectionRequired)
-    
+
     return (isReachable && !needsConnection)
   }
 }
 
 @available(iOS 12.0, macOS 10.14, *)
 extension Networking.Connectivity {
-  
+
   @MainActor
   public static var monitorChangeHandlers: [Handler] = [] {
     didSet {
@@ -87,7 +88,7 @@ extension Networking.Connectivity {
         @unknown default:
           newState = .noConnection
         }
-        
+
         Task { @MainActor in
           for handler in monitorChangeHandlers {
             handler(newState)
@@ -96,7 +97,7 @@ extension Networking.Connectivity {
       }
     }
   }
-  
+
   @MainActor
   static func addObserveReachabilityChange(
     handler: @escaping Handler
@@ -106,7 +107,7 @@ extension Networking.Connectivity {
       let queue = DispatchQueue(label: "Monitor")
       monitor?.start(queue: queue)
     }
-    
+
     monitorChangeHandlers.append(handler)
   }
 }

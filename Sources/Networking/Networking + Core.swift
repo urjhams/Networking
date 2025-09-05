@@ -1,8 +1,8 @@
 import Foundation
 
 /// convenience extension for debugging Decodable object
-public extension CustomStringConvertible where Self: Decodable {
-  var description: String {
+extension CustomStringConvertible where Self: Decodable {
+  public var description: String {
     var description = "\n \(type(of: self)) \n"
     let mirror = Mirror(reflecting: self)
     for child in mirror.children {
@@ -17,27 +17,27 @@ public extension CustomStringConvertible where Self: Decodable {
 extension URLSession: @unchecked Sendable {}
 
 public actor Networking {
-  
+
   /// shared instance of Network class
   public static let shared = Networking()
-  
+
   internal var session = URLSession.shared
-  
+
   public func set(_ session: URLSession = .shared) {
     self.session = session
   }
-  
+
   /// network handle closure
-  public typealias NetworkHandler = @Sendable (Result<Data, Error>) -> ()
-  
+  public typealias NetworkHandler = @Sendable (Result<Data, Error>) -> Void
+
   public typealias GenericResult<T: Decodable> = Result<T, Error>
-  
+
   // network handle generic closure
-  public typealias NetworkGenericHandler<T: Decodable> = @Sendable (GenericResult<T>) -> ()
-  
+  public typealias NetworkGenericHandler<T: Decodable> = @Sendable (GenericResult<T>) -> Void
+
   /// private init to avoid unexpected instances allocate
   private init() {}
-  
+
   public enum Method: String {
     case `get` = "GET"
     case post = "POST"
@@ -55,7 +55,7 @@ public actor Networking {
     case downloadServerSideError(statusCode: HTTPStatus)
     case badRequestAuthorization
     case unknown
-    
+
     public static func == (lhs: NetworkError, rhs: NetworkError) -> Bool {
       return switch (rhs, lhs) {
       case (.badUrl, .badUrl),
@@ -64,10 +64,12 @@ public actor Networking {
         (.badRequestAuthorization, .badRequestAuthorization),
         (.unknown, .unknown):
         true
-      case (.httpSeverSideError(let data1, let status1), .httpSeverSideError(let data2, let status2)):
+      case (
+        .httpSeverSideError(let data1, let status1), .httpSeverSideError(let data2, let status2)
+      ):
         data1 == data2 && status1 == status2
       case (.badRequestParameters(let p1), .badRequestParameters(let p2)):
-        NSDictionary(dictionary: p1 as [AnyHashable : Any]).isEqual(to: p2 as [AnyHashable : Any])
+        NSDictionary(dictionary: p1 as [AnyHashable: Any]).isEqual(to: p2 as [AnyHashable: Any])
       case (.downloadServerSideError(let status1), .downloadServerSideError(let status2)):
         status1 == status2
       default:
@@ -75,39 +77,58 @@ public actor Networking {
       }
     }
   }
-  
+
   public enum Authorization {
-    // https://developer.apple.com/documentation/foundation/url_loading_system/handling_an_authentication_challenge
     case basicAuth(userName: String, password: String)
-    case digestAuth(userName: String, password: String, realm: String, nonce: String, uri: String, qop: String? = nil, nc: String? = nil, cnonce: String? = nil)
+    case digestAuth(
+      userName: String,
+      password: String,
+      realm: String,
+      nonce: String,
+      uri: String,
+      qop: String? = nil,
+      nc: String? = nil,
+      cnonce: String? = nil
+    )
     case bearerToken(token: String?)
     case apiKey(key: String, value: String)
-    
+
     // OAuth 1.0 - RFC 5849
-    case oauth1(consumerKey: String, consumerSecret: String, token: String?, tokenSecret: String?, signature: OAuth1Signature = .hmacSha1)
-    
+    case oauth1(
+      consumerKey: String,
+      consumerSecret: String,
+      token: String?,
+      tokenSecret: String?,
+      signature: OAuth1Signature = .hmacSha1
+    )
+
     // OAuth 2.0 - RFC 6749
     case oauth2(accessToken: String, tokenType: String = "Bearer")
-    
+
     // Hawk Authentication - RFC draft
     case hawk(id: String, key: String, algorithm: HawkAlgorithm = .sha256)
-    
+
     // AWS Signature Version 4
-    case awsSignature(accessKey: String, secretKey: String, region: String, service: String, sessionToken: String? = nil)
+    case awsSignature(
+      accessKey: String,
+      secretKey: String,
+      region: String,
+      service: String,
+      sessionToken: String? = nil
+    )
   }
-  
+
   public enum OAuth1Signature: String, Sendable {
     case hmacSha1 = "HMAC-SHA1"
     case hmacSha256 = "HMAC-SHA256"
     case plaintext = "PLAINTEXT"
   }
-  
+
   public enum HawkAlgorithm: String, Sendable {
     case sha1 = "sha1"
     case sha256 = "sha256"
   }
-  
-  
+
   /// Possible status code, will get raw value as 0 for the `unknown` case
   /// - 1xxs – `Informational responses`: The server is thinking through the request.
   /// - 2xxs – `Success`: The request was successfully completed
@@ -122,20 +143,20 @@ public actor Networking {
   /// by the client but the server failed to complete the request.
   public enum HTTPStatus: Int, Sendable {
     case unknown
-    
+
     case success = 200
-    
+
     case PermanentRedirect = 301
     case TemporaryRedirect = 302
-    
+
     case badRequest = 400
     case notAuthorized = 401
     case forbidden = 403
     case notFound = 404
-    
+
     case internalServerError = 500
     case serviceUnavailable = 503
-    
+
     public init(_ code: Int) {
       self = HTTPStatus.init(rawValue: code) ?? .unknown
     }
@@ -149,7 +170,7 @@ extension Networking.NetworkError: LocalizedError {
       return "⛔️ This seem not a vail url."
     case .transportError:
       return "⛔️ There is a transport error."
-    case .httpSeverSideError( _,let statusCode):
+    case .httpSeverSideError(_, let statusCode):
       let code = statusCode.rawValue
       return "⛔️ There is a http server error with status code \(code)."
     case .badRequestParameters(let parameters):

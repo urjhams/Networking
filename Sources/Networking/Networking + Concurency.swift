@@ -42,10 +42,10 @@ extension URLSession {
           let error = error ?? Networking.NetworkError.transportError
           return continuation.resume(throwing: error)
         }
-        
+
         continuation.resume(returning: (data, response))
       }
-      
+
       task.resume()
     }
   }
@@ -53,52 +53,48 @@ extension URLSession {
 
 @available(swift 5.5)
 @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-public extension Networking {
-  
+extension Networking {
+
   /// Call a HTTP request. All the error handlers will stop the function immediately
   /// - Parameters:
   ///   - request: the configured request object
   /// - Returns: the response data and information
   @discardableResult
-  func sendRequest(
+  public func sendRequest(
     _ request: Request,
     session: URLSession = .shared
   ) async throws -> (Data, HTTPURLResponse) {
-    
+
     let urlRequest = try request.urlRequest()
-    
+
     // try to get data from request
     let (data, response): (Data, URLResponse)
-    if #available(
-      iOS 15.0,
-      macOS 12.0,
-      tvOS 15.0,
-      watchOS 8.0,
-      macCatalyst 15.0,
-      *
-    ) {
+    if #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, macCatalyst 15.0, *) {
       (data, response) = try await session.data(for: urlRequest)
     } else {
       (data, response) = try await session.data(from: urlRequest)
     }
-    
+
     guard let httpResponse = response as? HTTPURLResponse else {
       throw NetworkError.transportError
     }
-    
+
     guard HTTPStatus(httpResponse.statusCode) == .success else {
       let statusCode = HTTPStatus(httpResponse.statusCode)
       throw NetworkError.httpSeverSideError(data, statusCode: statusCode)
     }
-    
+
     return (data, httpResponse)
   }
-  
+
   /// Call a HTTP request. All the error handlers will stop the function immediately
   /// - Parameters:
   ///   - request: the configured request object
   /// - Returns: the response data or error
-  func send(_ request: Request, session: URLSession = .shared) async -> Result<Data, Networking.NetworkError> {
+  public func send(
+    _ request: Request,
+    session: URLSession = .shared
+  ) async -> Result<Data, Networking.NetworkError> {
     do {
       let response = try await sendRequest(request, session: session)
       let status = HTTPStatus(response.1.statusCode)
@@ -114,58 +110,50 @@ public extension Networking {
       return .failure(.unknown)
     }
   }
-  
+
   /// Get the expected JSON - Decodable object via a HTTP request.
   /// - Parameters:
   ///   - objectType: The Decodable type of object we want to cast from the response data
   ///   - request: the configured request object
   /// - Returns: the expected JSON object.
-  func get<ObjectType>(
+  public func get<ObjectType>(
     _ objectType: ObjectType.Type,
     from request: Request,
     session: URLSession = .shared
   ) async throws -> ObjectType where ObjectType: Decodable {
-    
+
     let urlRequest = try request.urlRequest()
     // try to get data from request
     let (data, response): (Data, URLResponse)
-    if #available(
-      iOS 15.0,
-      macOS 12.0,
-      tvOS 15.0,
-      watchOS 8.0,
-      macCatalyst 15.0,
-      *
-    ) {
+    if #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, macCatalyst 15.0, *) {
       (data, response) = try await session.data(for: urlRequest)
     } else {
       (data, response) = try await session.data(from: urlRequest)
     }
-    
+
     guard let httpResponse = response as? HTTPURLResponse else {
       throw NetworkError.transportError
     }
-    
+
     guard HTTPStatus(httpResponse.statusCode) == .success else {
       let statusCode = HTTPStatus(httpResponse.statusCode)
       throw NetworkError.httpSeverSideError(data, statusCode: statusCode)
     }
-        
-    guard let object = try? JSONDecoder()
-            .decode(objectType.self, from: data)
+
+    guard let object = try? JSONDecoder().decode(objectType.self, from: data)
     else {
       throw NetworkError.jsonFormatError
     }
-    
+
     return object
   }
-  
+
   /// Safety get the expected JSON - Decodable object via a HTTP request.
   /// - Parameters:
   ///   - objectType: The Decodable type of object we want to cast from the response data
   ///   - request: the configured request object
   /// - Returns: the expected JSON object or Error
-  func getObj<ObjectType>(
+  public func getObj<ObjectType>(
     _ objectType: ObjectType.Type,
     from request: Request,
     session: URLSession = .shared
