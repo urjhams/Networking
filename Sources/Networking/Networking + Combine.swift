@@ -88,7 +88,7 @@ extension Networking {
       Future { [unowned self] promise in
         Task {
           do {
-            let result = try await self.getObject(T.self, from: request)
+            let result = try await self.get(T.self, from: request)
             promise(.success(result))
           } catch {
             promise(.failure(error))

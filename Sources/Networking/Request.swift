@@ -2,32 +2,13 @@ import Foundation
 import CryptoKit
 import CommonCrypto
 
-/// A Sendable-conforming type that can hold various parameter values
-public enum ParameterValue: Sendable {
-  case string(String)
-  case int(Int)
-  case double(Double) 
-  case bool(Bool)
-  case null
-  
-  var anyValue: Any {
-    switch self {
-    case .string(let value): return value
-    case .int(let value): return value
-    case .double(let value): return value
-    case .bool(let value): return value
-    case .null: return NSNull()
-    }
-  }
-}
-
 public protocol BaseRequest {
   var baseURL: String { get set }
   var method: Networking.Method { get set }
   var timeOut: TimeInterval { get set }
   var authorization: Networking.Authorization? { get set }
   var cachePolicy: URLRequest.CachePolicy { get set }
-  var parameters: [String : ParameterValue?]? { get set }
+  var parameters: [String : Sendable?]? { get set }
   
   init()
 }
@@ -44,7 +25,7 @@ public extension BaseRequest {
     timeout: TimeInterval = 10.0,
     authorization: Authorization? = nil,
     cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy,
-    parameters: [String : ParameterValue?]? = nil
+    parameters: [String : (any Sendable)?]? = nil
   ) {
     self.init()
     self.baseURL = encodedUrl
@@ -123,7 +104,7 @@ public extension BaseRequest {
     signature: Networking.OAuth1Signature,
     httpMethod: String,
     url: String,
-    parameters: [String: ParameterValue?]?
+    parameters: [String: Sendable?]?
   ) throws -> String {
     let timestamp = String(Int(Date().timeIntervalSince1970))
     let nonce = UUID().uuidString
@@ -272,7 +253,7 @@ public extension BaseRequest {
     httpMethod: String,
     url: String,
     oauthParams: [String: String],
-    parameters: [String: ParameterValue?]?
+    parameters: [String: Sendable?]?
   ) throws -> String {
     guard let urlComponents = URLComponents(string: url) else {
       throw NetworkError.badUrl
@@ -290,7 +271,7 @@ public extension BaseRequest {
     // Add body parameters (for POST/PUT)
     parameters?.forEach { key, value in
       if let paramValue = value {
-        allParams[key] = String(describing: paramValue.anyValue)
+        allParams[key] = String(describing: paramValue)
       }
     }
     
@@ -505,9 +486,9 @@ public extension BaseRequest {
       case .apiKey(let key, let value):
         if case .get = method {
           if configParameters == nil {
-            configParameters = [key: ParameterValue.string(value)]
+            configParameters = [key: value]
           } else {
-            configParameters![key] = ParameterValue.string(value)
+            configParameters![key] = value
           }
         } else {
           request.setValue(value, forHTTPHeaderField: key)
@@ -566,7 +547,7 @@ public extension BaseRequest {
     // for GET, add directly to the url
     switch method {
     case .post, .put, .patch:
-      let anyParams = parameters.compactMapValues { $0?.anyValue }
+      let anyParams = parameters.compactMapValues { $0 }
       guard
         let json = try? JSONSerialization.data(withJSONObject: anyParams, options: [])
       else {
@@ -580,7 +561,7 @@ public extension BaseRequest {
       
       finalUrl.queryItems = parameters.map { key, value in
         // in case value is nil, replace by blank space instead
-        URLQueryItem(name: key, value: String(describing: value?.anyValue ?? ""))
+        URLQueryItem(name: key, value: String(describing: value ?? ""))
       }
       
       finalUrl.percentEncodedQuery = finalUrl
@@ -596,14 +577,15 @@ public extension BaseRequest {
 }
 
 public final class Request: BaseRequest, @unchecked Sendable {
+
   public var cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
   
   public var baseURL: String = ""
   
   public var method: Networking.Method = .post
-  
-  public var parameters: [String : ParameterValue?]? = nil
-  
+
+  public var parameters: [String : Sendable?]? = nil
+    
   public var timeOut: TimeInterval = 60.0
   
   public var authorization: Networking.Authorization? = nil

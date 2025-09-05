@@ -120,7 +120,7 @@ public extension Networking {
   ///   - objectType: The Decodable type of object we want to cast from the response data
   ///   - request: the configured request object
   /// - Returns: the expected JSON object.
-  func getObject<ObjectType>(
+  func get<ObjectType>(
     _ objectType: ObjectType.Type,
     from request: Request,
     session: URLSession = .shared
@@ -165,13 +165,13 @@ public extension Networking {
   ///   - objectType: The Decodable type of object we want to cast from the response data
   ///   - request: the configured request object
   /// - Returns: the expected JSON object or Error
-  func get<ObjectType>(
+  func getObj<ObjectType>(
     _ objectType: ObjectType.Type,
     from request: Request,
     session: URLSession = .shared
   ) async -> Result<ObjectType, Networking.NetworkError> where ObjectType: Decodable {
     do {
-      let object = try await getObject(objectType, from: request, session: session)
+      let object = try await get(objectType, from: request, session: session)
       return .success(object)
     } catch {
       return .failure(.unknown)

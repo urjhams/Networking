@@ -3,7 +3,7 @@ import Foundation
 import Combine
 @testable import Networking
 
-// Here we use sample API from https://m3o.com/helloworld
+// All tests use FAKE data through MockURLProtocol - no real API calls are made
 struct NetworkingTests: @unchecked Sendable {
   struct Sample: Decodable, @unchecked Sendable {
     var message: String = ""
@@ -26,33 +26,16 @@ struct NetworkingTests: @unchecked Sendable {
     await instance.set(URLSession(configuration: configuration))
   }
   
-//  @Test("Test the original call with result handler block")
-//  func standard() async throws {
-//    
-//    await instance.get(
-//      Sample.self,
-//      from: postRequest
-//    ) { result in
-//      switch result {
-//      case .success(let sample):
-//        #expect(sample.message == "Hello Quan", "The return should be: `message` : `Hello Quan`")
-//      case .failure(_):
-//        Issue.record("The return should be success")
-//        break
-//      }
-//      
-//    }
-//  }
-  
   @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-  @Test("Concurrency test with async await")
-  func concurency() async throws {
+  @Test("Concurrency test with fake mock data")
+  func concurrency() async throws {
+    // This test uses completely FAKE data through MockURLProtocol
+    // No real API calls are made - everything is mocked locally
+    // MockURLProtocol intercepts "https://local-testing.com/greeting" and returns fake JSON
     
-    async let sample = instance.getObject(Sample.self, from: postRequest, session: instance.session)
+    let sample = try await instance.get(Sample.self, from: postRequest, session: instance.session)
     
-    let message = try await sample.message
-    
-    #expect(message == "Hello Quan", "The return should be: `message` : `Hello Quan`")
+    #expect(sample.message == "Hello Quan", "MockURLProtocol should return fake message: 'Hello Quan'")
   }
   
   @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
@@ -62,130 +45,140 @@ struct NetworkingTests: @unchecked Sendable {
     copyRequest.baseURL = "https://local-testing.com/greetingggg"
     await #expect(throws: Networking.NetworkError.httpSeverSideError(Data(), statusCode: .forbidden)) {
       try await instance
-        .getObject(Sample.self, from: copyRequest, session: instance.session)
+        .get(Sample.self, from: copyRequest, session: instance.session)
     }
   }
   
-//  @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-//  @Test("Combine framework test")
-//  func combine() throws {
-//    var subcriptions = Set<AnyCancellable>()
-//    
-//    instance
-//      .publisher(for: Sample.self, from: postRequest)
-//      .sink { completion in
-//        switch completion {
-//        case .finished:
-//          break
-//        case .failure(let error):
-//          Issue.record("got an error: \(error.localizedDescription)")
-//        }
-//      } receiveValue: { sample in
-//        #expect(sample.message == "Hello Quan", "The return should be: `message` : `Hello Quan`")
-//      }
-//      .store(in: &subcriptions)
-//    
-//  }
-//  
-//  @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-//  @Test("Combien framework test with standard call")
-//  func vombineUseWithStandard() throws {
-//    
-//    var subcriptions = Set<AnyCancellable>()
-//    
-//    Deferred {
-//      Future { promise in
-//        self
-//          .instance
-//          .get(Sample.self, from: self.postRequest, completion: promise)
-//      }
-//    }
-//    .eraseToAnyPublisher()
-//    .sink { completion in
-//      switch completion {
-//      case .finished:
-//        break
-//      case .failure(let error):
-//        Issue.record("got an error: \(error.localizedDescription)")
-//      }
-//    } receiveValue: { sample in
-//      #expect(sample.message == "Hello Quan", "The return should be: `message` : `Hello Quan`")
-//    }
-//    .store(in: &subcriptions)
-//    
-//  }
-//  
-//  @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-//  @Test("Test concurency mix with standard call")
-//  func concurencyUseWithStandard() async throws {
-//    
-//    let sample = try await withCheckedThrowingContinuation { continuation in
-//      self.instance.get(Sample.self, from: self.postRequest) { result in
-//        continuation.resume(with: result)
-//      }
-//    }
-//    
-//    #expect(sample.message == "Hello Quan", "The return should be: `message` : `Hello Quan`")
-//  }
-//  
-//  @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-//  @Test("Test concurrency mix with combine framework usage")
-//  func concurencyUseWithCombine() async throws {
-//    
-//    var subcriptions = Set<AnyCancellable>()
-//    
-//    let sample: Sample =
-//    try await withCheckedThrowingContinuation { continuation in
-//      self
-//        .instance
-//        .publisher(for: Sample.self, from: self.postRequest)
-//        .sink { completion in
-//          switch completion {
-//          case .finished:
-//            break
-//          case .failure(let error):
-//            continuation.resume(throwing: error)
-//          }
-//        } receiveValue: { sample in
-//          continuation.resume(returning: sample)
-//        }
-//        .store(in: &subcriptions)
-//    }
-//    
-//    #expect(sample.message == "Hello Quan", "The return should be: `message` : `Hello Quan`")
-//  }
-//  
-//  @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-//  @Test("Test combine framwork mix with concurency call")
-//  func combineUseWithConcurency() async throws {
-//    
-//    var subscription = Set<AnyCancellable>()
-//    Deferred {
-//        Future<Sample, Error> { promise in
-//        Task {
-//          #expect(throws: Never.self) {
-//            async let result = self
-//              .instance
-//              .getObject(Sample.self, from: self.postRequest)
-//            
-//            print("result: \(try await result)")
-//            
-//            try await promise(.success(result))
-//          }
-//        }
-//      }
-//    }
-//    .eraseToAnyPublisher()
-//    .sink { completion in
-//      switch completion {
-//      case .finished:
-//        print("finished")
-//      case .failure(let error):
-//        Issue.record(error, "got an error: \(error.localizedDescription)")
-//      }
-//    } receiveValue: { sample in
-//      #expect(sample.message == "Hello Quan", "The return should be: `message` : `Hello Quan`")
-//    }
-//    .store(in: &subscription)
-//  }
+  // MARK: - Authentication Tests
+  
+  @Test("Digest Auth test")
+  func digestAuthTest() throws {
+    let digestRequest = Request(
+      from: "https://example.com/protected",
+      as: .get,
+      authorization: .digestAuth(
+        userName: "testuser",
+        password: "testpass", 
+        realm: "test@example.com",
+        nonce: "dcd98b7102dd2f0e8b11d0f600bfb0c093",
+        uri: "/protected"
+      )
+    )
+    
+    let urlRequest = try digestRequest.urlRequest()
+    let authHeader = urlRequest.value(forHTTPHeaderField: "Authorization")
+    
+    #expect(authHeader != nil, "Authorization header should be present")
+    #expect(authHeader!.hasPrefix("Digest"), "Should be Digest authentication")
+    #expect(authHeader!.contains("username=\"testuser\""), "Should contain username")
+    #expect(authHeader!.contains("realm=\"test@example.com\""), "Should contain realm")
+    #expect(authHeader!.contains("response="), "Should contain response hash")
+  }
+  
+  @Test("OAuth 1.0 test")
+  func oauth1Test() throws {
+    let oauth1Request = Request(
+      from: "https://api.example.com/resource",
+      as: .post,
+      authorization: .oauth1(
+        consumerKey: "consumer_key",
+        consumerSecret: "consumer_secret",
+        token: "access_token",
+        tokenSecret: "token_secret"
+      ),
+      parameters: ["param1": "value1"]
+    )
+    
+    let urlRequest = try oauth1Request.urlRequest()
+    let authHeader = urlRequest.value(forHTTPHeaderField: "Authorization")
+    
+    #expect(authHeader != nil, "Authorization header should be present")
+    #expect(authHeader!.hasPrefix("OAuth"), "Should be OAuth authentication")
+    #expect(authHeader!.contains("oauth_consumer_key="), "Should contain consumer key")
+    #expect(authHeader!.contains("oauth_token="), "Should contain token")
+    #expect(authHeader!.contains("oauth_signature="), "Should contain signature")
+  }
+  
+  @Test("OAuth 2.0 test") 
+  func oauth2Test() throws {
+    let oauth2Request = Request(
+      from: "https://api.example.com/data",
+      as: .get,
+      authorization: .oauth2(accessToken: "access_token_12345")
+    )
+    
+    let urlRequest = try oauth2Request.urlRequest()
+    let authHeader = urlRequest.value(forHTTPHeaderField: "Authorization")
+    
+    #expect(authHeader == "Bearer access_token_12345", "Should be Bearer token")
+  }
+  
+  @Test("Hawk Auth test")
+  func hawkAuthTest() throws {
+    let hawkRequest = Request(
+      from: "https://api.example.com/endpoint",
+      as: .get,
+      authorization: .hawk(id: "hawk_id", key: "hawk_key")
+    )
+    
+    let urlRequest = try hawkRequest.urlRequest()
+    let authHeader = urlRequest.value(forHTTPHeaderField: "Authorization")
+    
+    #expect(authHeader != nil, "Authorization header should be present")
+    #expect(authHeader!.hasPrefix("Hawk"), "Should be Hawk authentication")
+    #expect(authHeader!.contains("id=\"hawk_id\""), "Should contain hawk id")
+    #expect(authHeader!.contains("mac="), "Should contain MAC")
+  }
+  
+  @Test("AWS Signature test")
+  func awsSignatureTest() throws {
+    let awsRequest = Request(
+      from: "https://s3.us-east-1.amazonaws.com/bucket/object",
+      as: .get,
+      authorization: .awsSignature(
+        accessKey: "AKIAIOSFODNN7EXAMPLE",
+        secretKey: "wJalrXUtnFEMI/K7MDENG/bPxRfiCYEXAMPLEKEY",
+        region: "us-east-1",
+        service: "s3"
+      )
+    )
+    
+    let urlRequest = try awsRequest.urlRequest()
+    let authHeader = urlRequest.value(forHTTPHeaderField: "Authorization")
+    let dateHeader = urlRequest.value(forHTTPHeaderField: "X-Amz-Date")
+    
+    #expect(authHeader != nil, "Authorization header should be present")
+    #expect(authHeader!.hasPrefix("AWS4-HMAC-SHA256"), "Should be AWS4 signature")
+    #expect(authHeader!.contains("Credential="), "Should contain credentials")
+    #expect(authHeader!.contains("Signature="), "Should contain signature")
+    #expect(dateHeader != nil, "X-Amz-Date header should be present")
+  }
+  
+  @Test("Sendable parameters functionality test")
+  func sendableParametersTest() throws {
+    let request = Request(
+      from: "https://api.example.com/test",
+      as: .post,
+      parameters: [
+        "string_param": "test_value",
+        "int_param": 42,
+        "double_param": 3.14,
+        "bool_param": true,
+        "null_param": NSNull()
+      ]
+    )
+    
+    let urlRequest = try request.urlRequest()
+    let httpBody = urlRequest.httpBody
+    
+    #expect(httpBody != nil, "HTTP body should be present for POST request")
+    
+    // Verify JSON serialization
+    let json = try JSONSerialization.jsonObject(with: httpBody!, options: []) as? [String: Any]
+    #expect(json != nil, "Should be valid JSON")
+    #expect(json?["string_param"] as? String == "test_value", "String parameter should be correct")
+    #expect(json?["int_param"] as? Int == 42, "Int parameter should be correct")
+    #expect(json?["double_param"] as? Double == 3.14, "Double parameter should be correct")
+    #expect(json?["bool_param"] as? Bool == true, "Bool parameter should be correct")
+  }
 }
