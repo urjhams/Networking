@@ -99,9 +99,7 @@ extension Networking.Connectivity {
   }
 
   @MainActor
-  static func addObserveReachabilityChange(
-    handler: @escaping Handler
-  ) {
+  static func addObserveReachabilityChange(handler: @escaping Handler) {
     // start the queue if needed
     if monitor?.queue == nil {
       let queue = DispatchQueue(label: "Monitor")

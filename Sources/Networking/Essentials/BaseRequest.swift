@@ -1,3 +1,10 @@
+//
+//  File.swift
+//  Networking
+//
+//  Created by Quân Đinh on 05.09.25.
+//
+
 import CommonCrypto
 import CryptoKit
 import Foundation
@@ -9,7 +16,7 @@ public protocol BaseRequest {
   var authorization: Networking.Authorization? { get set }
   var cachePolicy: URLRequest.CachePolicy { get set }
   var parameters: [String: Sendable?]? { get set }
-
+  
   init()
 }
 
@@ -17,7 +24,7 @@ extension BaseRequest {
   public typealias Method = Networking.Method
   public typealias NetworkError = Networking.NetworkError
   public typealias Authorization = Networking.Authorization
-
+  
   /// default init
   public init(
     from encodedUrl: String,
@@ -33,30 +40,13 @@ extension BaseRequest {
     self.timeOut = timeout
     self.authorization = authorization
     self.cachePolicy = cachePolicy
-
+    
     self.parameters = parameters
   }
 }
 
-public enum Signature {
-  case md5(String)
-  case plain(String)
-
-  var plain: String {
-    switch self {
-    case .md5(let secret):
-      let digest = Insecure.MD5.hash(data: secret.data(using: .utf8) ?? Data())
-
-      return digest.map { String(format: "%02hhx", $0) }.joined()
-    case .plain(let plain):
-      return plain
-    }
-  }
-
-}
-
 extension BaseRequest {
-
+  
   // MARK: - OAuth 1.0 Helper Methods
   private func generateOAuth1SignatureBaseString(
     httpMethod: String,
@@ -67,38 +57,38 @@ extension BaseRequest {
     guard let urlComponents = URLComponents(string: url) else {
       throw NetworkError.badUrl
     }
-
+    
     let baseUrl =
-      "\(urlComponents.scheme ?? "https")://\(urlComponents.host ?? "")\(urlComponents.path)"
-
+    "\(urlComponents.scheme ?? "https")://\(urlComponents.host ?? "")\(urlComponents.path)"
+    
     var allParams: [String: String] = oauthParams
-
+    
     // Add query parameters
     urlComponents.queryItems?.forEach { item in
       allParams[item.name] = item.value ?? ""
     }
-
+    
     // Add body parameters (for POST/PUT)
     parameters?.forEach { key, value in
       if let paramValue = value {
         allParams[key] = String(describing: paramValue)
       }
     }
-
+    
     // Sort and encode parameters
     let sortedParams = allParams.sorted { $0.key < $1.key }
     let paramString =
-      sortedParams
+    sortedParams
       .map { "\($0.key.percentEncoded())=\($0.value.percentEncoded())" }
       .joined(separator: "&")
-
+    
     return [
       httpMethod.uppercased().percentEncoded(),
       baseUrl.percentEncoded(),
       paramString.percentEncoded(),
     ].joined(separator: "&")
   }
-
+  
   private func generateOAuth1Signature(
     baseString: String,
     signingKey: String,
@@ -111,19 +101,19 @@ extension BaseRequest {
       let signature = HMAC<Insecure.SHA1>.authenticationCode(
         for: baseData, using: SymmetricKey(data: keyData))
       return Data(signature).base64EncodedString()
-
+      
     case .hmacSha256:
       let keyData = signingKey.data(using: .utf8)!
       let baseData = baseString.data(using: .utf8)!
       let signature = HMAC<SHA256>.authenticationCode(
         for: baseData, using: SymmetricKey(data: keyData))
       return Data(signature).base64EncodedString()
-
+      
     case .plaintext:
       return signingKey
     }
   }
-
+  
   // MARK: - Hawk Helper Methods
   private func generateHawkMAC(
     normalizedString: String,
@@ -132,19 +122,19 @@ extension BaseRequest {
   ) throws -> String {
     let keyData = key.data(using: .utf8)!
     let stringData = normalizedString.data(using: .utf8)!
-
+    
     switch algorithm {
     case .sha1:
       let mac = HMAC<Insecure.SHA1>.authenticationCode(
         for: stringData, using: SymmetricKey(data: keyData))
       return Data(mac).base64EncodedString()
-
+      
     case .sha256:
       let mac = HMAC<SHA256>.authenticationCode(for: stringData, using: SymmetricKey(data: keyData))
       return Data(mac).base64EncodedString()
     }
   }
-
+  
   // MARK: - Authorization Helper Methods
   private func configureBasicAuth(
     _ request: inout URLRequest,
@@ -161,7 +151,7 @@ extension BaseRequest {
       forHTTPHeaderField: "Authorization"
     )
   }
-
+  
   private func configureDigestAuth(
     _ request: inout URLRequest,
     username: String,
@@ -186,18 +176,18 @@ extension BaseRequest {
     )
     
     var digestHeader = "Digest username=\"\(username)\"," +
-      " realm=\"\(realm)\"," +
-      " nonce=\"\(nonce)\"," +
-      " uri=\"\(uri)\"," +
-      " response=\"\(response)\""
-
+    " realm=\"\(realm)\"," +
+    " nonce=\"\(nonce)\"," +
+    " uri=\"\(uri)\"," +
+    " response=\"\(response)\""
+    
     if let qop = qop, let nc = nc, let cnonce = cnonce {
       digestHeader += ", qop=\(qop), nc=\(nc), cnonce=\"\(cnonce)\""
     }
-
+    
     request.setValue(digestHeader, forHTTPHeaderField: "Authorization")
   }
-
+  
   private func configureBearerToken(
     _ request: inout URLRequest,
     token: String?
@@ -210,7 +200,7 @@ extension BaseRequest {
       forHTTPHeaderField: "Authorization"
     )
   }
-
+  
   private func configureApiKey(
     _ request: inout URLRequest,
     key: String,
@@ -227,7 +217,7 @@ extension BaseRequest {
       request.setValue(value, forHTTPHeaderField: key)
     }
   }
-
+  
   private func configureOAuth1(
     _ request: inout URLRequest,
     consumerKey: String,
@@ -250,7 +240,7 @@ extension BaseRequest {
     )
     request.setValue(oauth1Header, forHTTPHeaderField: "Authorization")
   }
-
+  
   private func configureOAuth2(
     _ request: inout URLRequest,
     accessToken: String,
@@ -258,7 +248,7 @@ extension BaseRequest {
   ) {
     request.setValue("\(tokenType) \(accessToken)", forHTTPHeaderField: "Authorization")
   }
-
+  
   private func configureHawk(
     _ request: inout URLRequest,
     id: String,
@@ -277,7 +267,7 @@ extension BaseRequest {
     )
     request.setValue(hawkHeader, forHTTPHeaderField: "Authorization")
   }
-
+  
   private func configureAWSSignature(
     _ request: inout URLRequest,
     accessKey: String,
@@ -301,8 +291,8 @@ extension BaseRequest {
       request.setValue(value, forHTTPHeaderField: key)
     }
   }
-
-
+  
+  
   public func urlRequest(singed signature: Signature? = nil) throws -> URLRequest {
     // encode url (to encode spaces for example)
     guard
@@ -312,32 +302,32 @@ extension BaseRequest {
     else {
       throw NetworkError.badUrl
     }
-
+    
     if let signature = signature, case .md5(_) = signature {
       let signatureString = signature.plain
       encodedUrl = "\(encodedUrl)&signature=\(signatureString)"
     }
-
+    
     guard let url = URL(string: encodedUrl) else {
       // bad url
       throw NetworkError.badUrl
     }
-
+    
     var request = URLRequest(
       url: url,
       cachePolicy: cachePolicy,
       timeoutInterval: timeOut
     )
-
+    
     request.httpMethod = method.rawValue
     request.setValue("application/json", forHTTPHeaderField: "Content-Type")
-
+    
     if case .plain(let keyword) = signature {
       request.setValue(keyword, forHTTPHeaderField: "Signature")
     }
-
+    
     var configParameters = parameters
-
+    
     // add Authorization information if has
     if let authorization = authorization {
       switch authorization {
@@ -363,7 +353,7 @@ extension BaseRequest {
         
       case .apiKey(let key, let value):
         configureApiKey(&request, key: key, value: value, configParameters: &configParameters)
-
+        
       case .oauth1(let consumerKey, let consumerSecret, let token, let tokenSecret, let signature):
         try configureOAuth1(
           &request,
@@ -375,10 +365,10 @@ extension BaseRequest {
           encodedUrl: encodedUrl,
           parameters: configParameters
         )
-
+        
       case .oauth2(let accessToken, let tokenType):
         configureOAuth2(&request, accessToken: accessToken, tokenType: tokenType)
-
+        
       case .hawk(let id, let key, let algorithm):
         try configureHawk(
           &request,
@@ -387,7 +377,7 @@ extension BaseRequest {
           algorithm: algorithm,
           encodedUrl: encodedUrl
         )
-
+        
       case .awsSignature(let accessKey, let secretKey, let region, let service, let sessionToken):
         try configureAWSSignature(
           &request,
@@ -400,11 +390,11 @@ extension BaseRequest {
         )
       }
     }
-
+    
     guard let parameters = configParameters else {
       return request
     }
-
+    
     // only put parameter in HTTP body of a POST request,
     // for GET, add directly to the url
     switch method {
@@ -420,58 +410,20 @@ extension BaseRequest {
       guard var finalUrl = URLComponents(string: encodedUrl) else {
         throw NetworkError.badUrl
       }
-
+      
       finalUrl.queryItems = parameters.map { key, value in
         // in case value is nil, replace by blank space instead
         URLQueryItem(name: key, value: String(describing: value ?? ""))
       }
-
+      
       finalUrl.percentEncodedQuery = finalUrl
         .percentEncodedQuery?
         .replacingOccurrences(of: "+", with: "%2B")
-
+      
       // re-assign the url with parameter components to the request
       request.url = finalUrl.url
     }
-
+    
     return request
-  }
-}
-
-public final class Request: BaseRequest, @unchecked Sendable {
-
-  public var cachePolicy: URLRequest.CachePolicy = .useProtocolCachePolicy
-
-  public var baseURL: String = ""
-
-  public var method: Networking.Method = .post
-
-  public var parameters: [String: Sendable?]? = nil
-
-  public var timeOut: TimeInterval = 60.0
-
-  public var authorization: Networking.Authorization? = nil
-
-  public required init() {}
-}
-
-// MARK: - String Extensions for Authentication
-internal let chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~"
-extension String {
-  func percentEncoded() -> String {
-    let allowed = CharacterSet(charactersIn: chars)
-    return self.addingPercentEncoding(withAllowedCharacters: allowed) ?? self
-  }
-
-  func awsEncoded() -> String {
-    let allowed = CharacterSet(charactersIn: chars)
-    return self.addingPercentEncoding(withAllowedCharacters: allowed) ?? self
-  }
-}
-
-// MARK: - Data Extensions
-extension Data {
-  var hexString: String {
-    return self.map { String(format: "%02hhx", $0) }.joined()
   }
 }
