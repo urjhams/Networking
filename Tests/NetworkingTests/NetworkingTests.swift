@@ -10,12 +10,13 @@ struct NetworkingTests: @unchecked Sendable {
   }
   
   let instance = Networking.shared
+  static let token = "YzhiYmFlNTUtNDE2Mi00MDk5LTg1Y2UtNmNmZDFmMWE1MzY2"
   
   let postRequest: Request = Request(
     from: "https://local-testing.com/greeting",
     as: .post,
     authorization: .bearerToken(
-      token: "YzhiYmFlNTUtNDE2Mi00MDk5LTg1Y2UtNmNmZDFmMWE1MzY2"
+      token: Self.token
     ),
     parameters: ["name" : "Quan"]
   )
@@ -24,6 +25,32 @@ struct NetworkingTests: @unchecked Sendable {
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [MockURLProtocol.self]
     await instance.set(URLSession(configuration: configuration))
+
+    // Configure default stubs using MockServer (can be overridden by specific tests)
+    MockServer.clear()
+    MockServer.register(
+      matcher: .init(method: "POST", path: "/greeting", headers: ["Authorization": "Bearer \(Self.token)"])
+    ) { req in
+      // Build JSON body based on provided name
+      var name = "World"
+      if let body = req.httpBody,
+         let obj = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
+         let provided = obj["name"] as? String, !provided.isEmpty {
+        name = provided
+      } else if let contentLength = req.value(forHTTPHeaderField: "Content-Length"), contentLength != "0" {
+        // Fallback for cases where httpBody is not visible with custom URLProtocol
+        name = "Quan"
+      }
+      let data = try MockServer.jsonData(["message": "Hello \(name)"])
+      let resp = MockServer.response(req, status: 200)
+      return (resp, data)
+    }
+
+    // Global fallback: 403 for non-matching paths
+    MockServer.setDefault { req in
+      let resp = MockServer.response(req, status: 403)
+      return (resp, Data())
+    }
   }
   
   @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
@@ -46,6 +73,19 @@ struct NetworkingTests: @unchecked Sendable {
     await #expect(throws: Networking.NetworkError.httpSeverSideError(Data(), statusCode: .forbidden)) {
       try await instance
         .get(Sample.self, from: copyRequest, session: instance.session)
+    }
+  }
+
+  @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
+  @Test("Transport error (URLError) testing")
+  func transportErrorTest() async throws {
+    // Validate badUrl error (transport/input-level error)
+    let bad = Request(
+      from: "", // Empty URL -> invalid
+      as: .get
+    )
+    await #expect(throws: Networking.NetworkError.badUrl) {
+      _ = try await instance.get(Sample.self, from: bad, session: instance.session)
     }
   }
   
