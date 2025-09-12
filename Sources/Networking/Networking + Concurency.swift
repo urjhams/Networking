@@ -116,11 +116,11 @@ extension Networking {
   ///   - objectType: The Decodable type of object we want to cast from the response data
   ///   - request: the configured request object
   /// - Returns: the expected JSON object.
-  public func get<ObjectType>(
-    _ objectType: ObjectType.Type,
+  public func get<T>(
+    _ objectType: T.Type,
     from request: Request,
     session: URLSession = .shared
-  ) async throws -> ObjectType where ObjectType: Decodable {
+  ) async throws -> T where T: Decodable {
 
     let urlRequest = try request.urlRequest()
     // try to get data from request
@@ -148,16 +148,83 @@ extension Networking {
     return object
   }
 
+  /// Get one of multiple possible Decodable types from a single HTTP response.
+  ///
+  /// Tries to decode the response body into each provided type in order and
+  /// returns the first successful result. If none of the types match the
+  /// payload, the function throws `Networking.NetworkError.jsonFormatError`.
+  ///
+  /// - Parameters:
+  ///   - possibleType: Ordered list of candidate `Decodable` types. The function
+  ///     attempts decoding in this order and returns on the first match.
+  ///   - request: Fully configured `Request` describing the HTTP call.
+  ///   - session: `URLSession` used to perform the request. Defaults to `.shared`.
+  /// - Returns: The decoded value as `Decodable`. Cast the returned value to your
+  ///   expected concrete type (e.g. `as? User` or `as? ErrorEnvelope`).
+  /// - Throws: `Networking.NetworkError.badUrl` when building the request fails;
+  ///   `Networking.NetworkError.transportError` when response is missing/invalid;
+  ///   `Networking.NetworkError.httpSeverSideError(_, statusCode:)` for non-2xx;
+  ///   `Networking.NetworkError.jsonFormatError` when no provided type decodes.
+  ///
+  /// Example:
+  /// ```swift
+  /// struct User: Decodable, Sendable { let id: Int }
+  /// struct ErrorEnvelope: Decodable { let message: String }
+  /// let value = try await networking.get(
+  ///   possibleType: [User.self, ErrorEnvelope.self],
+  ///   from: request
+  /// )
+  /// if let user = value as? User {
+  ///   // handle success
+  /// } else if let serverError = value as? ErrorEnvelope {
+  ///   // handle API error payload encoded as JSON
+  /// }
+  /// ```
+  public func get(
+    possibleType: [ConcurencyDecodable.Type],
+    from request: Request,
+    session: URLSession = .shared
+  ) async throws -> ConcurencyDecodable {
+
+    let urlRequest = try request.urlRequest()
+
+    // try to get data from request
+    let (data, response): (Data, URLResponse)
+    if #available(iOS 15.0, macOS 12.0, tvOS 15.0, watchOS 8.0, macCatalyst 15.0, *) {
+      (data, response) = try await session.data(for: urlRequest)
+    } else {
+      (data, response) = try await session.data(from: urlRequest)
+    }
+
+    guard let httpResponse = response as? HTTPURLResponse else {
+      throw NetworkError.transportError
+    }
+
+    guard HTTPStatus(httpResponse.statusCode) == .success else {
+      let statusCode = HTTPStatus(httpResponse.statusCode)
+      throw NetworkError.httpSeverSideError(data, statusCode: statusCode)
+    }
+
+    let decoder = JSONDecoder()
+    for objectType in possibleType {
+      if let decoded = try? decoder.decode(objectType, from: data) {
+        return decoded
+      }
+    }
+
+    throw NetworkError.jsonFormatError
+  }
+
   /// Safety get the expected JSON - Decodable object via a HTTP request.
   /// - Parameters:
   ///   - objectType: The Decodable type of object we want to cast from the response data
   ///   - request: the configured request object
   /// - Returns: the expected JSON object or Error
-  public func getObj<ObjectType>(
-    _ objectType: ObjectType.Type,
+  public func getObj<T>(
+    _ objectType: T.Type,
     from request: Request,
     session: URLSession = .shared
-  ) async -> Result<ObjectType, Networking.NetworkError> where ObjectType: Decodable {
+  ) async -> Result<T, Networking.NetworkError> where T: Decodable {
     do {
       let object = try await get(objectType, from: request, session: session)
       return .success(object)

@@ -1,5 +1,8 @@
 import Foundation
 
+// Concurrency-friendly Decodable existential used by tests and optional APIs
+public typealias ConcurencyDecodable = Decodable & Sendable
+
 /// convenience extension for debugging Decodable object
 extension CustomStringConvertible where Self: Decodable {
   public var description: String {

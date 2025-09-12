@@ -71,6 +71,45 @@ extension Networking {
         .eraseToAnyPublisher()
     }
   }
+
+  /// Get a typed publisher using a specific URLSession
+  /// - Parameters:
+  ///   - type: The Decodable type to decode
+  ///   - request: The configured request object
+  ///   - session: The URLSession to execute the request
+  /// - Returns: A publisher that emits decoded values or error
+  public func publisher<T>(
+    for type: T.Type,
+    from request: Request,
+    session: URLSession
+  ) -> AnyPublisher<T, Error> where T: Decodable {
+    do {
+      let urlRequest = try request.urlRequest()
+      return
+        session
+        .dataTaskPublisher(for: urlRequest)
+        .tryMap { data, response in
+          guard
+            let response = response as? HTTPURLResponse
+          else {
+            throw NetworkError.transportError
+          }
+
+          let statusCode = HTTPStatus(response.statusCode)
+
+          if case .success = statusCode {
+            return data
+          } else {
+            throw NetworkError.httpSeverSideError(data, statusCode: statusCode)
+          }
+        }
+        .decode(type: T.self, decoder: JSONDecoder())
+        .eraseToAnyPublisher()
+    } catch {
+      return Fail(error: error)
+        .eraseToAnyPublisher()
+    }
+  }
 }
 
 @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)

@@ -21,24 +21,28 @@ struct NetworkingTests: @unchecked Sendable {
     parameters: ["name" : "Quan"]
   )
   
-  init() async {
+  // No global setup or MockServer defaults; keep isolation per test
+  init() async {}
+  
+  @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
+  @Test("Concurrency test with fake mock data")
+  func concurrency() async throws {
+    // Per-test session + stub
     let configuration = URLSessionConfiguration.ephemeral
     configuration.protocolClasses = [MockURLProtocol.self]
-    await instance.set(URLSession(configuration: configuration))
+    let session = URLSession(configuration: configuration)
 
-    // Configure default stubs using MockServer (can be overridden by specific tests)
-    MockServer.clear()
     MockServer.register(
-      matcher: .init(method: "POST", path: "/greeting", headers: ["Authorization": "Bearer \(Self.token)"])
+      matcher: .init(method: "POST", path: "/greeting", headers: ["Authorization": "Bearer \(Self.token)"]),
+      once: true
     ) { req in
-      // Build JSON body based on provided name
       var name = "World"
       if let body = req.httpBody,
          let obj = try? JSONSerialization.jsonObject(with: body) as? [String: Any],
          let provided = obj["name"] as? String, !provided.isEmpty {
         name = provided
       } else if let contentLength = req.value(forHTTPHeaderField: "Content-Length"), contentLength != "0" {
-        // Fallback for cases where httpBody is not visible with custom URLProtocol
+        // Fallback for cases where httpBody may not be visible
         name = "Quan"
       }
       let data = try MockServer.jsonData(["message": "Hello \(name)"])
@@ -46,33 +50,29 @@ struct NetworkingTests: @unchecked Sendable {
       return (resp, data)
     }
 
-    // Global fallback: 403 for non-matching paths
-    MockServer.setDefault { req in
-      let resp = MockServer.response(req, status: 403)
-      return (resp, Data())
-    }
-  }
-  
-  @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
-  @Test("Concurrency test with fake mock data")
-  func concurrency() async throws {
-    // This test uses completely FAKE data through MockURLProtocol
-    // No real API calls are made - everything is mocked locally
-    // MockURLProtocol intercepts "https://local-testing.com/greeting" and returns fake JSON
-    
-    let sample = try await instance.get(Sample.self, from: postRequest, session: instance.session)
-    
+    let sample = try await instance.get(Sample.self, from: postRequest, session: session)
     #expect(sample.message == "Hello Quan", "MockURLProtocol should return fake message: 'Hello Quan'")
   }
   
   @available(iOS 13.0, tvOS 13.0, watchOS 6.0, macOS 10.15, macCatalyst 15.0, *)
   @Test("Error testing")
   func error() async throws {
-    let copyRequest = postRequest
-    copyRequest.baseURL = "https://local-testing.com/greetingggg"
+    // Per-test session + explicit 403 stub
+    let configuration = URLSessionConfiguration.ephemeral
+    configuration.protocolClasses = [MockURLProtocol.self]
+    let session = URLSession(configuration: configuration)
+
+    let wrong = Request(from: "https://local-testing.com/greetingggg", as: .post)
+    MockServer.register(
+      matcher: .init(method: "POST", path: "/greetingggg"),
+      once: true
+    ) { req in
+      let resp = MockServer.response(req, status: 403)
+      return (resp, Data())
+    }
+
     await #expect(throws: Networking.NetworkError.httpSeverSideError(Data(), statusCode: .forbidden)) {
-      try await instance
-        .get(Sample.self, from: copyRequest, session: instance.session)
+      _ = try await instance.get(Sample.self, from: wrong, session: session)
     }
   }
 
@@ -222,3 +222,4 @@ struct NetworkingTests: @unchecked Sendable {
     #expect(json?["bool_param"] as? Bool == true, "Bool parameter should be correct")
   }
 }
+
