@@ -64,11 +64,15 @@ enum MockServer {
      priority: Int = 0,
     handler: @escaping (URLRequest) throws -> (HTTPURLResponse, Data)
   ) {
-    queue.sync { stubs.append(Stub(matcher: matcher, once: once, priority: priority, handler: handler)) }
+    queue.sync { 
+      stubs.append(Stub(matcher: matcher, once: once, priority: priority, handler: handler)) 
+    }
   }
 
-  static func registerOnce(matcher: Matcher,
-                           handler: @escaping (URLRequest) throws -> (HTTPURLResponse, Data)) {
+  static func registerOnce(
+    matcher: Matcher,
+    handler: @escaping (URLRequest) throws -> (HTTPURLResponse, Data)
+  ) {
     register(matcher: matcher, once: true, priority: 0, handler: handler)
   }
 
